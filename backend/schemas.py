@@ -26,6 +26,8 @@ class GenerateQuizRequest(BaseModel):
     topic_type: str = "Theory"  # "Theory" | "Applied"
     format_type: str = "MCQ"  # "MCQ" | "TEXT"
     model_name: str = "gpt-4o-mini"
+    user_id: str = "default_user"
+    subject_id: str = "default_subject"
 
 
 class SubmitAnswerRequest(BaseModel):
@@ -36,6 +38,8 @@ class SubmitAnswerRequest(BaseModel):
     question_type: str = "MCQ"  # "MCQ" | "TF" | "MULTI" | "TEXT"
     file_id: Optional[str] = None
     model_name: str = "gpt-4o-mini"
+    user_id: str = "default_user"
+    subject_id: str = "default_subject"
 
 
 class ChunkResponse(BaseModel):

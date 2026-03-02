@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import traceback
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from .ai_service import (
     generate_chunks,
@@ -65,15 +66,23 @@ def _build_chunk_text(sections: list[dict], chunk_begin: int, chunk_end: int) ->
 
 @router.post("/slides", response_model=FileUploadResponse)
 async def upload_slides(
-    user_id: str = Query(default="default_user"),
-    subject_id: str = Query(default="default_subject"),
+    user_id: str = Form(default="default_user"),
+    subject_id: str = Form(default="default_subject"),
     file: UploadFile = File(...),
 ):
+    stage = "start"
     try:
+        stage = "process_uploaded_file"
+        print(
+            f"[upload_slides] stage={stage} user_id={user_id} subject_id={subject_id} filename={file.filename}",
+            flush=True,
+        )
         processed = await process_uploaded_file(file)
         file_id = str(uuid4())
         created_at = _utc_now_iso()
 
+        stage = "upsert_raw_file"
+        print(f"[upload_slides] stage={stage} file_id={file_id}", flush=True)
         upsert_raw_file(
             user_id=user_id,
             subject_id=subject_id,
@@ -86,6 +95,11 @@ async def upload_slides(
             created_at=created_at,
         )
 
+        stage = "generate_chunks"
+        print(
+            f"[upload_slides] stage={stage} sections={len(processed['sections'])}",
+            flush=True,
+        )
         slides_text = "\n\n".join(
             f"Slide {sec['section_id']}:\n{sec['content']}" for sec in processed["sections"]
         )
@@ -94,6 +108,7 @@ async def upload_slides(
         chunks: list[ChunkResponse] = []
         max_section_id = max((int(sec.get("section_id", 0)) for sec in processed["sections"]), default=1)
         for token in chunk_tokens:
+            stage = "per_chunk"
             chunk_id = str(uuid4())
             chunk_begin = _safe_int(token.get("CHUNKBEGIN"), 1)
             chunk_end = _safe_int(token.get("CHUNKEND"), chunk_begin)
@@ -102,6 +117,11 @@ async def upload_slides(
             chunk_text = _build_chunk_text(processed["sections"], chunk_begin, chunk_end)
             summary = generate_summary(chunk_text) if chunk_text else ""
 
+            stage = "upsert_chunk"
+            print(
+                f"[upload_slides] stage={stage} chunk_id={chunk_id} begin={chunk_begin} end={chunk_end}",
+                flush=True,
+            )
             upsert_chunk(
                 user_id=user_id,
                 subject_id=subject_id,
@@ -126,6 +146,11 @@ async def upload_slides(
                 )
             )
 
+        stage = "return_response"
+        print(
+            f"[upload_slides] stage={stage} file_id={file_id} chunks={len(chunks)}",
+            flush=True,
+        )
         return FileUploadResponse(
             slide_id=file_id,
             filename=processed["filename"],
@@ -135,6 +160,11 @@ async def upload_slides(
     except HTTPException:
         raise
     except Exception as exc:
+        print(
+            f"[upload_slides] ERROR stage={stage} type={type(exc).__name__} msg={exc}",
+            flush=True,
+        )
+        print(traceback.format_exc(), flush=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -193,10 +223,10 @@ def get_slide(
 @router.post("/quiz/generate", response_model=QuestionResponse)
 def generate_quiz(
     payload: GenerateQuizRequest,
-    user_id: str = Query(default="default_user"),
-    subject_id: str = Query(default="default_subject"),
 ):
     try:
+        user_id = payload.user_id
+        subject_id = payload.subject_id
         raw = generate_quiz_modular(
             payload.chunk_text,
             payload.topic_type,
@@ -238,9 +268,9 @@ def generate_quiz(
 @router.post("/quiz/answer", response_model=AttemptResponse)
 def answer_quiz(
     payload: SubmitAnswerRequest,
-    user_id: str = Query(default="default_user"),
-    subject_id: str = Query(default="default_subject"),
 ):
+    user_id = payload.user_id
+    subject_id = payload.subject_id
     question = get_past_quiz_by_id(payload.question_id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
