@@ -91,24 +91,35 @@ def parse_metadata(section_text: str) -> Tuple[Dict[str, Any], str]:
 
     return final_metadata, remaining_text
 
-def generate_chunks(slides_text: str, file_name: str, model_name: str = "gpt-4o-mini"):
+def generate_chunks(
+        slides_text: str,
+        file_name: str,
+        model_name: str = "gpt-4o-mini",
+        max_retries: int = 10,
+):
     """
     Sends slides to AI and returns parsed chunks in token format.
-    Each chunk contains metadata like filename, begin/end, etc.
+    Retries if CHUNK tokens are missing.
     """
+
     prompt = build_chunk_request(slides_text, file_name)
 
-    response = call_openai_model(
-        client=get_openai_client(),
-        prompt=prompt,
-        model_name=model_name,
+    for attempt in range(max_retries):
+        response = call_openai_model(
+            client=get_openai_client(),
+            prompt=prompt,
+            model_name=model_name,
+        )
+
+        sections = parse_sections(response, "CHUNK", repeatable=True)
+
+        if sections:
+            parsed_chunks = [parse_metadata(sec)[0] for sec in sections]
+            return parsed_chunks
+
+    raise ValueError(
+        f"Failed to generate valid CHUNK tokens after {max_retries} attempts."
     )
-
-    # Parse sections (repeatable) and extract metadata
-    sections = parse_sections(response, "CHUNK", repeatable=True)
-    parsed_chunks = [parse_metadata(sec)[0] for sec in sections]
-
-    return parsed_chunks
 
 
 def generate_summary(chunk_text: str, model_name: str = "gpt-4o-mini") -> str:
@@ -138,49 +149,51 @@ def generate_quiz_modular(
         topic_type: str = "Theory",
         format_type: str = "MCQ",
         model_name: str = "gpt-4o-mini",
+        max_retries: int = 10,
 ):
     """
-    Sends a chunk to AI and returns a single parsed quiz question in token format.
-
-    Output tokens example:
-        <<QUESTION>> ... <</QUESTION>>
-        <<OPTION>> ... <</OPTION>>
-        <<ANSWER>> ... <</ANSWER>>
+    Sends a chunk to AI and returns a parsed quiz question.
+    Retries if required tokens are missing.
     """
 
     prompt = build_quiz_prompt(chunk_text, topic_type, format_type)
 
-    response = call_openai_model(
-        client=get_openai_client(),
-        prompt=prompt,
-        model_name=model_name,
+    for attempt in range(max_retries):
+        response = call_openai_model(
+            client=get_openai_client(),
+            prompt=prompt,
+            model_name=model_name,
+        )
+
+        # QUESTION
+        q_sec = parse_sections(response, "QUESTION", repeatable=False)
+        if not q_sec:
+            continue
+
+        metadata, remaining_text = parse_metadata(q_sec)
+
+        # OPTION
+        options = parse_sections(response, "OPTION", repeatable=True)
+        if not options:
+            continue
+
+        # ANSWER
+        answer_sec = parse_sections(response, "ANSWER", repeatable=False)
+        if not answer_sec:
+            continue
+
+        answer = answer_sec.strip()
+
+        return {
+            "metadata": metadata,
+            "question_text": remaining_text,
+            "options": options,
+            "answer": answer,
+        }
+
+    raise ValueError(
+        f"Failed to generate valid quiz tokens after {max_retries} attempts."
     )
-
-    # Get the single QUESTION section
-    q_sec = parse_sections(response, "QUESTION", repeatable=False)
-    if not q_sec:
-        raise ValueError("No QUESTION token found in AI response.")
-
-    # Parse metadata inside the question
-    metadata, remaining_text = parse_metadata(q_sec)
-
-    # Parse options
-    options = parse_sections(response, "OPTION", repeatable=True)
-
-    # Parse answer
-    answer_sec = parse_sections(response, "ANSWER", repeatable=False)
-    answer = answer_sec.strip() if answer_sec else None
-
-    # Build final dict
-    quiz_question = {
-        "metadata": metadata,
-        "question_text": remaining_text,
-        "options": options or [],
-        "answer": answer,
-    }
-
-    return quiz_question
-
 
 
 def grade_mcq_quiz(correct_answer: str, user_answer: str) -> int:
