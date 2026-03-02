@@ -301,18 +301,35 @@ export default function QuizPage({ quizMeta, settings, questions, onExit }) {
               else if (sel.includes(idx)) cls += ' wrong';
             } else if (sel.includes(idx)) cls += ' selected';
             return (
-              <button
-                key={idx}
-                className={cls}
-                disabled={submitted}
-                onClick={() => {
-                  if (submitted) return;
-                  const cur = Array.isArray(userAnswers[q.id]) ? [...userAnswers[q.id]] : [];
-                  const i = cur.indexOf(idx);
-                  i >= 0 ? cur.splice(i, 1) : cur.push(idx);
-                  setAnswer(q.id, [...cur]);
-                }}
-              >
+                <button
+                    key={idx}
+                    className={cls}
+                    disabled={submitted}
+                    onClick={() => {
+                      if (submitted) return;
+
+                      const current = userAnswers[q.id] || "";
+
+                      // Convert string like "013" → [0,1,3]
+                      const cur = current
+                          ? current.split("").map(Number)
+                          : [];
+
+                      const i = cur.indexOf(idx);
+
+                      if (i >= 0) {
+                        cur.splice(i, 1);
+                      } else {
+                        cur.push(idx);
+                      }
+
+                      // Always sort so order is consistent
+                      cur.sort((a, b) => a - b);
+
+                      // Join WITHOUT commas
+                      setAnswer(q.id, cur.join(""));
+                    }}
+                >
                 <span className="qp-opt-check">
                   {(sel.includes(idx) || (submitted && cor.includes(idx))) ? '✓' : ''}
                 </span>

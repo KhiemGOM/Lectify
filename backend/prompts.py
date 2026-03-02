@@ -1,4 +1,4 @@
-CHUNK_PROMPT = CHUNK_PROMPT = """
+CHUNK_PROMPT = """
 You are an AI that converts slides into logical content units.
 
 Instructions:
@@ -10,8 +10,8 @@ Instructions:
 
 <<!CHUNK>>
 <<FILENAME:"filename_here">>
-<<CHUNKBEGIN:beginslide_number_inclusive>>
-<<CHUNKEND:endslide_number_inclusive>>
+<<CHUNKBEGIN:begin_slide_number_inclusive>>
+<<CHUNKEND:end_slide_number_inclusive>>
 <</!CHUNK>>
 
 - Each CHUNK must correspond to one unit of content (e.g., 5-10 slides).
@@ -37,7 +37,7 @@ Output format:
 <<QUESTION>>
 <<!SLIDE:the slide number here>>
 <<!SLIDE:additional slide numbers if needed>>
-(Write the question text here)
+Write the question text here
 <</QUESTION>>
 
 <<!TOPIC>>topic 1<</!TOPIC>>
@@ -66,7 +66,7 @@ Output format:
 <<!SLIDE:the slide number here>>
 <<!SLIDE:additional slide numbers if needed>>
 <<FORMAT:TEXT/LATEX/CODE>>
-(Write the question text here)
+Write the question text here
 <</QUESTION>>
 <<ANSWER>>
 (Modal answer)
@@ -82,6 +82,68 @@ Rules:
 - Choose the format for the answer you expected correctly: TEXT is for generic plain text answer; LATEX is for maths expression, or result of calculation answer (a number); CODE is for code answer.
 - MUST include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
 - Topics must be short, concise noun phrases.
+"""
+
+TF_PROMPT = """
+Output format:
+
+(thinking and planning here)
+
+<<QUESTION>>
+<<!SLIDE:the slide number here>>
+<<!SLIDE:additional slide numbers if needed>>
+Write the statement here. It must be clearly True or False question.
+<</QUESTION>>
+
+<<!TOPIC>>topic 1<</!TOPIC>>
+<<!TOPIC>>topic 2<</!TOPIC>>
+
+<<!OPTION>>True<</!OPTION>>
+<<!OPTION>>False<</!OPTION>>
+<<ANSWER>>0/1<</ANSWER>>
+
+Rules:
+- Must strictly follow this token structure.
+- The statement must be unambiguous.
+- <<ANSWER>> must be 0 (False) or 1 (True).
+- Include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
+- Topics must be short, concise noun phrases.
+- No extra text inside tokens.
+"""
+
+MULTI_PROMPT = """
+Output format:
+
+(thinking and planning here)
+
+<<QUESTION>>
+<<!SLIDE:the slide number here>>
+<<!SLIDE:additional slide numbers if needed>>
+Write the question text here. It must require selecting potentially multiple correct answers.
+<</QUESTION>>
+
+<<!TOPIC>>topic 1<</!TOPIC>>
+<<!TOPIC>>topic 2<</!TOPIC>>
+<<!TOPIC>>topic 3<</!TOPIC>>
+
+<<!OPTION>>Option 1<</!OPTION>>
+<<!OPTION>>Option 2<</!OPTION>>
+<<!OPTION>>Option 3<</!OPTION>>
+<<!OPTION>>Option 4<</!OPTION>>
+<<!OPTION>>Option 5<</!OPTION>>
+
+<<ANSWER>>02<</ANSWER>>
+
+Rules:
+- Must strictly follow this token structure.
+- There must be at least 2 correct answers.
+- <<ANSWER>> must be single digit number altogether (e.g., 023).
+- Indices must match option positions exactly.
+- No spaces inside <<ANSWER>> (e.g., use 02 not 0, 2).
+- So DO NOT use any answer that is more than 9.
+- Include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
+- Topics must be short, concise noun phrases.
+- No extra text inside tokens.
 """
 
 GRADE_TEXT_PROMPT = """
@@ -126,18 +188,35 @@ def build_chunk_request(slides_text: str, file_name: str) -> str:
     return f'{CHUNK_PROMPT}\n\nFILENAME:"{file_name}"\n\nSLIDES:\n{slides_text}'
 
 
-def build_quiz_prompt(chunk_text: str, topic_type: str, format_type: str) -> str:
+def build_quiz_prompt(
+        chunk_text: str,
+        topic_type: str,
+        format_type: str,
+) -> str:
+    # Topic selection
     topic_prompt = THEORY_PROMPT if topic_type == "Theory" else APPLIED_PROMPT
-    format_prompt = MCQ_PROMPT if format_type == "MCQ" else TEXT_PROMPT
+
+    # Format selection
+    format_map = {
+        "MCQ": MCQ_PROMPT,
+        "TF": TF_PROMPT,
+        "MULTI": MULTI_PROMPT,
+        "TEXT": TEXT_PROMPT,  # if you still support it
+    }
+
+    if format_type not in format_map:
+        raise ValueError(f"Unsupported format_type: {format_type}")
+
+    format_prompt = format_map[format_type]
     return f"""
     You are a quiz-generating AI. You should only generate ONE question.
     - The question should be related to the slides and you should be able to add citation back to the slides where the knowledge being tested come from using the <<!SLIDE:SLIDENUMBER>> token.
-    - The metadata token <<!SLIDE:1/2/3/...>> (the "!") mean that you can add more than 1 slide in citation so please include all relavent slides in the question.
+    - The metadata token <<!SLIDE:1/2/3/...>> (the "!") mean that you can add more than 1 slide in citation so please include all relevant slides in the question.
     - The content can span multiple slide but your question can focus on cross slide knowledge or just 1 sentence in 1 slide, it is up to you but please cite the slide number accordingly.
     - DO NOT put answer inside the question token, the question token should only include slide meta data, and ONE question only.
     - AI reasoning MUST appear outside the tokens.
     - AI MUST reason and plan the question and answer option before any token begin.
-    - DO NOT include unnessary whitespace character.
+    - DO NOT include unnecessary whitespace character.
 
     {topic_prompt}
 

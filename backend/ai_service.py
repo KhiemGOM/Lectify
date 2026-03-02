@@ -195,9 +195,35 @@ def generate_quiz_modular(
         f"Failed to generate valid quiz tokens after {max_retries} attempts."
     )
 
+def _normalize_answer(ans: str) -> str:
+    return "".join(sorted(ans.strip()))
 
-def grade_mcq_quiz(correct_answer: str, user_answer: str) -> int:
-    return 10 if user_answer == correct_answer else 0
+def grade_single_choice(correct_answer: str, user_answer: str) -> int:
+    correct = correct_answer.strip()
+    user = user_answer.strip()
+    return 10 if user == correct else 0
+
+def grade_multi_answer(correct_answer: str, user_answer: str) -> int:
+    correct_set = set(correct_answer.strip())
+    user_set = set(user_answer.strip())
+
+    if not correct_set:
+        return 0
+
+    # Count correct selections
+    correct_hits = len(user_set & correct_set)
+
+    # Count incorrect selections (user picked something not correct)
+    wrong_hits = len(user_set - correct_set)
+
+    # Compute score ratio
+    score_ratio = (correct_hits - wrong_hits) / len(correct_set)
+
+    # Clamp between 0 and 1
+    score_ratio = max(0.0, min(1.0, score_ratio))
+
+    # Scale to 10 and round
+    return round(score_ratio * 10)
 
 
 def grade_nonmcq_quiz(
@@ -211,21 +237,27 @@ def grade_nonmcq_quiz(
         client=get_openai_client(),
         prompt=prompt,
         model_name=model_name,
-        temperature=0.0,
-        max_tokens=512,
     )
     score = parse_sections(response, "SCORE", repeatable=False)
     return int(score) if score and str(score).isdigit() else 0
 
 
 def grade_quiz(
-    raw_quiz_text: str,
-    user_answer: str,
-    question_type: str = "MCQ",
-    model_name: str = "gpt-4o-mini",
+        raw_quiz_text: str,
+        user_answer: str,
+        question_type: str = "MCQ",
+        model_name: str = "gpt-4o-mini",
 ):
     correct_answer = parse_sections(raw_quiz_text, "ANSWER", repeatable=False) or ""
-    if question_type == "MCQ":
-        return grade_mcq_quiz(correct_answer, user_answer)
-    question = parse_sections(raw_quiz_text, "QUESTION", repeatable=False) or ""
-    return grade_nonmcq_quiz(question, correct_answer, user_answer, model_name)
+
+    if question_type in {"MCQ", "TF"}:
+        return grade_single_choice(correct_answer, user_answer)
+
+    if question_type == "MULTI":
+        return grade_multi_answer(correct_answer, user_answer)
+
+    if question_type == "TEXT":
+        question = parse_sections(raw_quiz_text, "QUESTION", repeatable=False) or ""
+        return grade_nonmcq_quiz(question, correct_answer, user_answer, model_name)
+
+    raise ValueError(f"Unsupported question_type: {question_type}")
