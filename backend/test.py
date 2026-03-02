@@ -102,7 +102,7 @@ async def test_quiz_generation(file_path: str):
 if __name__ == "__main__":
     import asyncio
 
-    file_path = "../.test/01_w1_Data_Science_Overview.pdf"  # your file
+    file_path = "./.test/01_w1_Data_Science_Overview.pdf"  # your file
     # asyncio.run(test_file_processing(file_path))
     # asyncio.run(test_chunk_generation(file_path))
     asyncio.run(test_quiz_generation(file_path))

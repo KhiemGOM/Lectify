@@ -254,15 +254,17 @@ def list_chunks(
 # ----------------------------
 
 def add_past_quiz(
-    *,
-    user_id: str,
-    subject_id: str,
-    citation: list[tuple[str, str]],  # [(slide_id, file_id)]
-    question: str,
-    options: list[str],
-    answer: str,
-    user_answer: str,
-    score: int,
+        *,
+        user_id: str,
+        subject_id: str,
+        citation: list[tuple[str, str]],  # [(slide_id, file_id)]
+        question: str,
+        options: list[str],
+        answer: str,
+        user_answer: str,
+        score: int,
+        time_start: str | None = None,
+        time_end: str | None = None,
 ) -> str:
     score_int = int(score)
     if score_int < 0 or score_int > 10:
@@ -271,20 +273,23 @@ def add_past_quiz(
     # Store citations as a list of [slide_id, file_id] pairs (JSON-friendly).
     citation_pairs = [[slide_id, f_id] for (slide_id, f_id) in citation]
 
-    return add_doc(
-        COLL.past_quiz,
-        {
-            "user_id": user_id,
-            "subject_id": subject_id,
-            "citation": citation_pairs,
-            "question": question,
-            "options": options,
-            "answer": answer,
-            "user_answer": user_answer,
-            "score": score_int,
-        },
-    )
+    data = {
+        "user_id": user_id,
+        "subject_id": subject_id,
+        "citation": citation_pairs,
+        "question": question,
+        "options": options,
+        "answer": answer,
+        "user_answer": user_answer,
+        "score": score_int,
+    }
 
+    if time_start:
+        data["time_start"] = time_start
+    if time_end:
+        data["time_end"] = time_end
+
+    return add_doc(COLL.past_quiz, data)
 
 def list_past_quiz(
     *,
@@ -333,3 +338,30 @@ def get_user_subject_metadata(
 ) -> Optional[dict[str, Any]]:
     return get_doc(COLL.user_subject_metadata, _doc_id(user_id, subject_id))
 
+def get_next_file_index(
+        user_id: str,
+        subject_id: str,
+        filename_prefix: str,
+) -> int:
+    """
+    Returns the next available index for a file in 'raw_files' collection
+    for the given user+subject, using your Firestore helper functions.
+
+    Args:
+        user_id: User ID
+        subject_id: Subject ID
+        filename_prefix: File name prefix to count existing files
+
+    Returns:
+        int: next available index (starts from 1)
+    """
+    existing_files = query_docs(
+        collection=COLL.raw_files,
+        filters=[
+            ("user_id", "==", user_id),
+            ("subject_id", "==", subject_id),
+            ("file_id", ">=", filename_prefix),
+            ("file_id", "<", filename_prefix + "\uf8ff"),  # unicode trick for startsWith
+        ],
+    )
+    return len(existing_files) + 1
