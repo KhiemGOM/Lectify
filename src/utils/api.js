@@ -7,9 +7,11 @@ export const API_BASE = 'http://127.0.0.1:8000';
  * Returns { slide_id, filename, file_type, chunks: [{chunk_id, file_id, filename, chunk_begin, chunk_end, summary}] }
  */
 export async function uploadSlides(file, userId = 'default_user', subjectId = 'default_subject') {
-  const url = `${API_BASE}/slides?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+  const url = `${API_BASE}/slides`;
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('user_id', userId);
+  formData.append('subject_id', subjectId);
 
   const res = await fetch(url, {
     method: 'POST',
@@ -42,7 +44,7 @@ export async function generateQuestion(
     throw new Error('Cannot generate question: selected chunk has no summary text.');
   }
 
-  const url = `${API_BASE}/quiz/generate?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+  const url = `${API_BASE}/quiz/generate`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,6 +55,8 @@ export async function generateQuestion(
       topic_type: topicType,
       format_type: formatType,
       model_name: 'gpt-4o-mini',
+      user_id: userId,
+      subject_id: subjectId,
     }),
   });
 
@@ -76,7 +80,7 @@ export async function gradeAnswer(
   userId = 'default_user',
   subjectId = 'default_subject',
 ) {
-  const url = `${API_BASE}/quiz/answer?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+  const url = `${API_BASE}/quiz/answer`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -86,6 +90,8 @@ export async function gradeAnswer(
       question_type: questionType,
       file_id: fileId,
       model_name: 'gpt-4o-mini',
+      user_id: userId,
+      subject_id: subjectId,
     }),
   });
 

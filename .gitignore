@@ -41,3 +41,8 @@ __pycache__/
 
 # Testing dir
 .test
+
+# Firebase / GCP service account keys
+secrets/
+*firebase-admin*.json
+*service-account*.json
