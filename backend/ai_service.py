@@ -1,11 +1,14 @@
 import os
 import re
 from collections import defaultdict
-
+from typing import Tuple, Dict
 from openai import OpenAI
+from prompts import build_chunk_request, build_quiz_prompt, build_grade_prompt
+from dotenv import load_dotenv
 
 
 def get_openai_client(api_key: str | None = None) -> OpenAI:
+    load_dotenv()
     key = api_key or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ValueError("OPENAI_API_KEY is not set.")
@@ -45,139 +48,142 @@ def parse_sections(text: str, section_name: str, repeatable: bool = False):
     return matches[0].strip() if matches else None
 
 
-def parse_metadata(section_text: str):
-    pattern = re.compile(r"<<([A-Z_]+):\s*\"?(.*?)\"?\s*>>")
+def parse_metadata(section_text: str) -> Tuple[Dict[str, any], str]:
+    """
+    Parses <<TOKEN:VALUE>> or <<!TOKEN:VALUE>> metadata from a section, and returns
+    both the metadata dict and the leftover text.
+
+    Returns:
+        metadata: dict of keys → single value or list if repeated (marked with !)
+        remaining_text: string with all <<TOKEN:VALUE>> removed
+    """
+    # Match optional ! at start of token
+    pattern = re.compile(r"<<(!?)([A-Z_]+):\s*\"?(.*?)\"?\s*>>")
+
     result = defaultdict(list)
-    for token, value in pattern.findall(section_text):
-        result[token].append(value.strip())
-    for k in list(result.keys()):
-        if len(result[k]) == 1:
-            result[k] = result[k][0]
-    return dict(result)
+    # Keep track of spans to remove them later
+    spans_to_remove = []
 
+    for match in pattern.finditer(section_text):
+        bang, key, value = match.groups()
+        value = value.strip()
+        if bang == "!":
+            # repeatable, always append
+            result[key].append(value)
+        else:
+            # not repeatable, append for now
+            result[key].append(value)
+        spans_to_remove.append(match.span())
 
-CHUNK_PROMPT = """
-You are an AI that converts slides into logical content units.
+    # Flatten keys that are not repeatable (only 1 value)
+    final_metadata = {}
+    for key, values in result.items():
+        if len(values) == 1:
+            final_metadata[key] = values[0]
+        else:
+            final_metadata[key] = values
 
-Instructions:
-- For each slide, reason and decide which "chunk" it belongs to.
-- Output each chunk as an empty structured section, with only metadata tokens.
-- Do NOT put any reasoning inside the tokens.
-- Use the following token format strictly:
+    # Remove metadata tokens from original text
+    remaining_text = section_text
+    for start, end in reversed(spans_to_remove):
+        remaining_text = remaining_text[:start] + remaining_text[end:]
+    remaining_text = remaining_text.strip()
 
-<<!CHUNK>>
-<<FILENAME:"filename_here">>
-<<CHUNKBEGIN:beginslide_number_inclusive>>
-<<CHUNKEND:endslide_number_inclusive>>
-<</!CHUNK>>
-"""
-
-THEORY_PROMPT = """
-Task: Generate questions based purely on the content of the slide (Theory).
-Reason outside the token blocks only. Do not include any reasoning inside tokens.
-"""
-
-APPLIED_PROMPT = """
-Task: Generate questions that apply the slide content to a broader context (Applied).
-Reason outside the token blocks only. Do not include reasoning inside tokens.
-"""
-
-MCQ_PROMPT = """
-Output format:
-
-<<QUESTION>>
-<<!SLIDE:the slide number here>>
-question text
-<</QUESTION>>
-<<!OPTION>>Option 1<</!OPTION>>
-<<!OPTION>>Option 2<</!OPTION>>
-<<!OPTION>>Option 3<</!OPTION>>
-<<!OPTION>>Option 4<</!OPTION>>
-<<ANSWER>>0/1/2/3<</ANSWER>>
-"""
-
-TEXT_PROMPT = """
-Output format:
-
-<<QUESTION>>
-<<!SLIDE:the slide number here>>
-<<FORMAT:TEXT/LATEX/CODE>>
-question text
-<</QUESTION>>
-<<ANSWER>>
-model answer
-<</ANSWER>>
-"""
-
-GRADE_TEXT_PROMPT = """
-You are a strict conceptual grader.
-Score from 0 to 10 as an integer.
-
-Output format:
-<<SCORE>>X<</SCORE>>
-"""
-
-
-def build_chunk_request(slides_text: str, file_name: str) -> str:
-    return f'{CHUNK_PROMPT}\n\nFILENAME:"{file_name}"\n\nSLIDES:\n{slides_text}'
-
-
-def build_quiz_prompt(chunk_text: str, topic_type: str, format_type: str) -> str:
-    topic_prompt = THEORY_PROMPT if topic_type == "Theory" else APPLIED_PROMPT
-    format_prompt = MCQ_PROMPT if format_type == "MCQ" else TEXT_PROMPT
-    return f"""
-You are a quiz-generating AI. Generate exactly one question and include slide citations.
-
-{topic_prompt}
-
-You must follow this token format strictly:
-{format_prompt}
-
-Slides content:
-{chunk_text}
-"""
-
-
-def build_grade_prompt(question: str, correct_answer: str, user_answer: str) -> str:
-    return f"""
-{GRADE_TEXT_PROMPT}
-
-Question:
-{question}
-
-Model Answer:
-{correct_answer}
-
-User Answer:
-{user_answer}
-"""
-
+    return final_metadata, remaining_text
 
 def generate_chunks(slides_text: str, file_name: str, model_name: str = "gpt-4o-mini"):
+    """
+    Sends slides to AI and returns parsed chunks in token format.
+    Each chunk contains metadata like filename, begin/end, etc.
+    """
     prompt = build_chunk_request(slides_text, file_name)
+
     response = call_openai_model(
         client=get_openai_client(),
         prompt=prompt,
         model_name=model_name,
     )
-    return response.strip()
+
+    # Parse sections (repeatable) and extract metadata
+    sections = parse_sections(response, "CHUNK", repeatable=True)
+    parsed_chunks = [parse_metadata(sec)[0] for sec in sections]
+
+    return parsed_chunks
 
 
-def generate_quiz_modular(
-    chunk_text: str,
-    topic_type: str = "Theory",
-    format_type: str = "MCQ",
-    model_name: str = "gpt-4o-mini",
-):
-    prompt = build_quiz_prompt(chunk_text, topic_type, format_type)
+def generate_summary(chunk_text: str, model_name: str = "gpt-4o-mini") -> str:
+    """
+    Sends a chunk of text to AI and returns a short summary string.
+    """
+    prompt = f"""
+You are an AI assistant. Summarize the following chunk of slides/text in 3-5 concise sentences.
+Just return plain text. Summary only, do not say anything else.
+
+Chunk content:
+{chunk_text}
+"""
+
     response = call_openai_model(
         client=get_openai_client(),
         prompt=prompt,
         model_name=model_name,
         temperature=0.0,
-        max_tokens=2048,
+        max_tokens=256,
     )
+
     return response.strip()
+
+def generate_quiz_modular(
+        chunk_text: str,
+        topic_type: str = "Theory",
+        format_type: str = "MCQ",
+        model_name: str = "gpt-4o-mini",
+):
+    """
+    Sends a chunk to AI and returns a single parsed quiz question in token format.
+
+    Output tokens example:
+        <<QUESTION>> ... <</QUESTION>>
+        <<OPTION>> ... <</OPTION>>
+        <<ANSWER>> ... <</ANSWER>>
+    """
+
+    prompt = build_quiz_prompt(chunk_text, topic_type, format_type)
+
+    response = call_openai_model(
+        client=get_openai_client(),
+        prompt=prompt,
+        model_name=model_name,
+    )
+
+    print(response)
+    print()
+
+    # Get the single QUESTION section
+    q_sec = parse_sections(response, "QUESTION", repeatable=False)
+    if not q_sec:
+        raise ValueError("No QUESTION token found in AI response.")
+
+    # Parse metadata inside the question
+    metadata, remaining_text = parse_metadata(q_sec)
+
+    # Parse options
+    options = parse_sections(response, "OPTION", repeatable=True)
+
+    # Parse answer
+    answer_sec = parse_sections(response, "ANSWER", repeatable=False)
+    answer = answer_sec.strip() if answer_sec else None
+
+    # Build final dict
+    quiz_question = {
+        "metadata": metadata,
+        "question_text": remaining_text,
+        "options": options or [],
+        "answer": answer,
+    }
+
+    return quiz_question
+
 
 
 def grade_mcq_quiz(correct_answer: str, user_answer: str) -> int:
