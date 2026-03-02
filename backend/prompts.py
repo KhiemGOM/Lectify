@@ -1,11 +1,9 @@
-# --- Store prompt separately for easy prompt engineering ---
-CHUNK_PROMPT = """
+CHUNK_PROMPT = CHUNK_PROMPT = """
 You are an AI that converts slides into logical content units.
 
 Instructions:
 - For each slide, reason and decide which "chunk" it belongs to.
 - Output each chunk as an **empty structured section**, with only metadata tokens.
-- Do NOT put any reasoning inside the tokens.
 - AI reasoning MUST appear outside the tokens.
 - AI MUST reason about chunk choice before any token begin.
 - Use the following token format strictly:
@@ -18,18 +16,9 @@ Instructions:
 
 - Each CHUNK must correspond to one unit of content (e.g., 5-10 slides).
 - Multiple CHUNKs should be output as multiple <<!CHUNK>> ... <</!CHUNK>> blocks.
-- DO NOT include unnessary whitespace character.
-- Do NOT include any other text inside the token blocks.
-- CHUNK must not overlap.
-- CHUNK should skip over introductory or overview slides. But any slide that contain any knowledge or content must be put inside a CHUNK.
+- CHUNK should be complete but must not overlap.
 """
 
-
-# --- Build request with slides text ---
-def build_chunk_request(slides_text: str, file_name : str) -> str:
-    return f"{CHUNK_PROMPT}\n\nFILENAME:\"{file_name}\"\n\nSLIDES:\n{slides_text}"
-
-# --- Topic prompts ---
 THEORY_PROMPT = """
 Task: Generate questions based purely on the content of the slide (Theory).
 Reason outside the token blocks only. Do not include any reasoning inside tokens.
@@ -40,7 +29,6 @@ Task: Generate questions that apply the slide content to a broader context (Appl
 Reason outside the token blocks only. Do not include reasoning inside tokens.
 """
 
-# --- Format prompts ---
 MCQ_PROMPT = """
 Output format:
 
@@ -48,9 +36,14 @@ Output format:
 
 <<QUESTION>>
 <<!SLIDE:the slide number here>>
-<<!SLIDE:additional slide number if needed>>
-Write the question text here, DO NOT put this in
+<<!SLIDE:additional slide numbers if needed>>
+(Write the question text here)
 <</QUESTION>>
+
+<<!TOPIC>>topic 1<</!TOPIC>>
+<<!TOPIC>>topic 2<</!TOPIC>>
+<<!TOPIC>>topic 3<</!TOPIC>>
+
 <<!OPTION>>Option 1<</!OPTION>>
 <<!OPTION>>Option 2<</!OPTION>>
 <<!OPTION>>Option 3<</!OPTION>>
@@ -60,6 +53,8 @@ Write the question text here, DO NOT put this in
 Rules:
 - Must strictly follow this token structure.
 - No extra text inside tokens.
+- Include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
+- Topics must be short, concise noun phrases.
 """
 
 TEXT_PROMPT = """
@@ -69,22 +64,28 @@ Output format:
 
 <<QUESTION>>
 <<!SLIDE:the slide number here>>
-<<!SLIDE:additional slide number if needed>>
+<<!SLIDE:additional slide numbers if needed>>
 <<FORMAT:TEXT/LATEX/CODE>>
-Write the question text here, DO NOT put this in
+(Write the question text here)
 <</QUESTION>>
 <<ANSWER>>
-(Modal answer, should tick all the boxes in criteria)
+(Modal answer)
 <</ANSWER>>
+
+<<!TOPIC>>topic 1<</!TOPIC>>
+<<!TOPIC>>topic 2<</!TOPIC>>
+<<!TOPIC>>topic 3<</!TOPIC>>
 
 Rules:
 - Must strictly follow this token structure.
 - No extra text inside tokens.
 - Choose the format for the answer you expected correctly: TEXT is for generic plain text answer; LATEX is for maths expression, or result of calculation answer (a number); CODE is for code answer.
+- MUST include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
+- Topics must be short, concise noun phrases.
 """
 
 GRADE_TEXT_PROMPT = """
-You are a strict conceptual grader. You will be provided with:
+You are a knowledge grader. You will be provided with:
 
 1) A question
 2) A model answer
@@ -120,36 +121,37 @@ Rules:
 - No extra text inside tokens.
 """
 
-def build_quiz_prompt(chunk_text, topic_type, format_type):
-    # select topic prompt
+
+def build_chunk_request(slides_text: str, file_name: str) -> str:
+    return f'{CHUNK_PROMPT}\n\nFILENAME:"{file_name}"\n\nSLIDES:\n{slides_text}'
+
+
+def build_quiz_prompt(chunk_text: str, topic_type: str, format_type: str) -> str:
     topic_prompt = THEORY_PROMPT if topic_type == "Theory" else APPLIED_PROMPT
-    # select format prompt
     format_prompt = MCQ_PROMPT if format_type == "MCQ" else TEXT_PROMPT
-
     return f"""
-You are a quiz-generating AI. You should only generate ONE question.
-- The question should be related to the slides and you should be able to add citation back to the slides where the knowledge being tested come from using the <<!SLIDE:SLIDENUMBER>> token.
-- The metadata token <<!SLIDE:1/2/3/...>> (the "!") mean that you can add more than 1 slide in citation so please include all relevant slides in the question.
-- PLEASE make sure that the Slide Number in citation ACTUALLY exist in the given content.
-- The content can span multiple slide but your question can focus on cross slide knowledge or just 1 sentence in 1 slide, it is up to you but please cite the slide number accordingly.
-- DO NOT put answer inside the question token, the question token should only include slide meta data, and ONE question only.
-- Do NOT put any reasoning inside the tokens.
-- AI reasoning MUST appear outside the tokens.
-- AI MUST reason and plan the question and answer option before any token begin.
-- DO NOT include unnecessary whitespace character.
+    You are a quiz-generating AI. You should only generate ONE question.
+    - The question should be related to the slides and you should be able to add citation back to the slides where the knowledge being tested come from using the <<!SLIDE:SLIDENUMBER>> token.
+    - The metadata token <<!SLIDE:1/2/3/...>> (the "!") mean that you can add more than 1 slide in citation so please include all relavent slides in the question.
+    - The content can span multiple slide but your question can focus on cross slide knowledge or just 1 sentence in 1 slide, it is up to you but please cite the slide number accordingly.
+    - DO NOT put answer inside the question token, the question token should only include slide meta data, and ONE question only.
+    - AI reasoning MUST appear outside the tokens.
+    - AI MUST reason and plan the question and answer option before any token begin.
+    - DO NOT include unnessary whitespace character.
 
-{topic_prompt}
+    {topic_prompt}
 
-You must follow this token format strictly, otherwise use text freely:
+    You must follow this token format strictly, otherwise use text freely:
 
-{format_prompt}
+    {format_prompt}
 
-Here is the content from the slides:
+    Here is the content from the slides:
 
-{chunk_text}
-"""
+    {chunk_text}
+    """
 
-def build_grade_prompt(question, correct_answer, user_answer):
+
+def build_grade_prompt(question: str, correct_answer: str, user_answer: str) -> str:
     return f"""
     {GRADE_TEXT_PROMPT}
 
