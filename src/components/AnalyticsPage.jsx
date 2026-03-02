@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import "../styles/analytics.css";
+import "../styles/Analytics.css";
 
 import { useUserAnalytics } from "../hooks/useUserAnalytics";
 
