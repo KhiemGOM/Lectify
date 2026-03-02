@@ -20,3 +20,4 @@ export async function getFiles(userId) {
     throw new Error('Could not find record.');
   }
 }
+
