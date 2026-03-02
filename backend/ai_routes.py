@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List
 import uuid
 
-from .ai_service import generate_chunks, generate_quiz_modular, grade_quiz, generate_summary
+from ai_service import generate_chunks, generate_quiz_modular, grade_quiz, generate_summary
 from firebase_utils import (
     upsert_raw_file,
     upsert_processed_slide,

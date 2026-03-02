@@ -1,0 +1,346 @@
+/* QuizSettings — matches UploadPage design system */
+
+.qs-page {
+  padding: 40px;
+  flex: 1;
+  width: 100%;
+  max-width: 680px;
+}
+
+/* ── Page header ── */
+.qs-header {
+  margin-bottom: 32px;
+}
+
+.qs-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.qs-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+/* ── Section card ── */
+.qs-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.qs-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 20px 0;
+  margin-bottom: 12px;
+}
+
+/* ── Row inside a section ── */
+.qs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  transition: background 0.15s;
+}
+
+.qs-row:first-of-type {
+  border-top: none;
+}
+
+.qs-row:hover {
+  background: var(--bg-secondary);
+}
+
+.qs-label-wrap {}
+
+.qs-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.qs-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ── Stepper ── */
+.qs-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.qs-stepper-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.qs-stepper-btn:hover {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+  color: #fff;
+}
+
+.qs-stepper-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 32px;
+  text-align: center;
+}
+
+/* ── Segment control (difficulty) ── */
+.qs-seg {
+  display: flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.qs-seg-btn {
+  padding: 7px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.qs-seg-btn:last-child {
+  border-right: none;
+}
+
+.qs-seg-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.qs-seg-btn.active {
+  background: var(--primary-blue);
+  color: #fff;
+}
+
+/* ── Type chips ── */
+.qs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.qs-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qs-chip:hover {
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  background: rgba(29, 78, 216, 0.04);
+}
+
+.qs-chip.active {
+  border-color: var(--primary-blue);
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--primary-blue);
+}
+
+/* ── Toggle switch ── */
+.qs-toggle-wrap {
+  flex-shrink: 0;
+}
+
+.qs-toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.qs-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.qs-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border-color);
+  border-radius: 99px;
+  transition: background 0.2s;
+}
+
+.qs-toggle input:checked ~ .qs-toggle-track {
+  background: var(--primary-blue);
+}
+
+.qs-toggle-thumb {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.qs-toggle input:checked ~ .qs-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ── Time input ── */
+.qs-time-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.qs-time-input {
+  width: 64px;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.qs-time-input:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+}
+
+.qs-time-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ── Summary banner ── */
+.qs-summary {
+  background: rgba(29, 78, 216, 0.05);
+  border: 1px solid rgba(29, 78, 216, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.qs-summary-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.qs-summary-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* ── Footer ── */
+.qs-footer {
+  display: flex;
+  gap: 12px;
+}
+
+.qs-btn-start {
+  flex: 1;
+  padding: 14px;
+  background: var(--primary-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  letter-spacing: -0.1px;
+}
+
+.qs-btn-start:hover {
+  background: var(--primary-blue-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.qs-btn-start:active {
+  transform: scale(0.99);
+}
+
+@media (max-width: 768px) {
+  .qs-page {
+    padding: 24px 16px;
+  }
+
+  .qs-title {
+    font-size: 24px;
+  }
+
+  .qs-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .qs-seg,
+  .qs-chips,
+  .qs-stepper {
+    align-self: flex-end;
+  }
+}

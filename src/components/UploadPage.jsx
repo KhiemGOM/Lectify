@@ -1,22 +1,22 @@
 import React, { useState, useRef } from 'react'
 import '../styles/UploadPage.css'
 import { Upload, X, FileText, Image as ImageIcon, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-function UploadPage({ onUploadComplete }) {
+import { uploadSlides } from '../utils/api';
+function UploadPage({ onUploadComplete, isInSession }) {
     const [files, setFiles] = useState([]);
     const [dragActive, setDragActive] = useState(false);
     const [quizTitle, setQuizTitle] = useState('');
     const [quizContext, setQuizContext] = useState('');
     const fileInputRef = useRef(null);
     const canCreateSession = () => {
-        const hasTitle = quizTitle.trim().length > 0;
+        const hasTitle = isInSession || quizTitle.trim().length > 0;
         const hasFiles = files.length > 0;
-        const allFilesUploaded = files.every(f => f.status === 'success');
 
-        return hasTitle && hasFiles && allFilesUploaded;
+        return hasTitle && hasFiles;
     };
 
     const getValidationMessage = () => {
-        if (!quizTitle.trim()) {
+        if (!isInSession && !quizTitle.trim()) {
             return 'Please enter a title';
         }
         if (files.length === 0) {
@@ -31,10 +31,16 @@ function UploadPage({ onUploadComplete }) {
     const handleCreateSession = () => {
         if (!canCreateSession()) return;
 
-        // Call parent's onUploadComplete
-        onUploadComplete(quizTitle, files.length);
+        const title = isInSession ? null : quizTitle;
+        const fileCount = files.length;
 
-        // Optional: Clear the form for next session
+        uploadFiles().then((apiData) => {
+            if (onUploadComplete) {
+                onUploadComplete(title, fileCount, apiData);
+            }
+        });
+
+        // Clear the form for next session
         setFiles([]);
         setQuizTitle('');
         setQuizContext('');
@@ -100,49 +106,34 @@ function UploadPage({ onUploadComplete }) {
 
     const uploadFiles = async () => {
         const filesToUpload = files.filter(f => f.status === 'ready');
+        const uploadedFiles = [];
 
         for (let fileObj of filesToUpload) {
-            // Update status to uploading
             setFiles(prev => prev.map(f =>
                 f.id === fileObj.id ? { ...f, status: 'uploading', progress: 0 } : f
             ));
 
-            const formData = new FormData();
-            formData.append('file', fileObj.file);
-            formData.append('title', quizTitle);
-            formData.append('context', quizContext);
-
             try {
-                // TODO: Replace with actual API endpoint
-                // const response = await fetch('https://your-api.com/upload', {
-                //   method: 'POST',
-                //   body: formData
-                // });
+                const apiData = await uploadSlides(fileObj.file);
 
-                // Simulate upload progress
-                for (let progress = 0; progress <= 100; progress += 10) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    setFiles(prev => prev.map(f =>
-                        f.id === fileObj.id ? { ...f, progress } : f
-                    ));
-                }
+                uploadedFiles.push({
+                    fileId: apiData.file_id,
+                    filename: fileObj.name,
+                    chunks: apiData.chunks || [],
+                });
 
-                // Update status to success
                 setFiles(prev => prev.map(f =>
                     f.id === fileObj.id ? { ...f, status: 'success', progress: 100 } : f
                 ));
-
             } catch (error) {
+                console.error('Upload error:', error);
                 setFiles(prev => prev.map(f =>
                     f.id === fileObj.id ? { ...f, status: 'error' } : f
                 ));
             }
         }
 
-        // After all uploads complete, notify parent to create session
-        if (filesToUpload.length > 0) {
-            onUploadComplete(quizTitle, filesToUpload.length);
-        }
+        return { files: uploadedFiles };
     };
 
     const getFileIcon = (type) => {
@@ -167,37 +158,43 @@ function UploadPage({ onUploadComplete }) {
     return (
         <div className="content-area">
             <div className="upload-section">
-                <h2>Upload Files</h2>
-                <p className="subtitle">Upload lecture slides / notes for quiz generation</p>
+                {!isInSession && (
+                    <>
+                        <h2>Upload Files</h2>
+                        <p className="subtitle">Upload lecture slides / notes for quiz generation</p>
+                    </>
+                )}
 
-                {/* Input Fields */}
-                <div className="input-section">
-                    <div className="input-group">
-                        <label htmlFor="quiz-title">Title <span style={{
-                            color: "red"
-                        }}>*</span></label>
-                        <input
-                            id="quiz-title"
-                            type="text"
-                            value={quizTitle}
-                            onChange={(e) => setQuizTitle(e.target.value)}
-                            placeholder="e.g., Course code (SC1007), topic (Data Structures), etc."
-                            className="title-input"
-                        />
-                    </div>
+                {/* Input Fields — only shown when not in a session */}
+                {!isInSession && (
+                    <div className="input-section">
+                        <div className="input-group">
+                            <label htmlFor="quiz-title">Title <span style={{
+                                color: "red"
+                            }}>*</span></label>
+                            <input
+                                id="quiz-title"
+                                type="text"
+                                value={quizTitle}
+                                onChange={(e) => setQuizTitle(e.target.value)}
+                                placeholder="e.g., Course code (SC1007), topic (Data Structures), etc."
+                                className="title-input"
+                            />
+                        </div>
 
-                    <div className="input-group">
-                        <label htmlFor="quiz-context">Additional Context</label>
-                        <textarea
-                            id="quiz-context"
-                            value={quizContext}
-                            onChange={(e) => setQuizContext(e.target.value)}
-                            placeholder="Provide context to help generate better questions (e.g., what this course is about, what topics to focus on, etc.)"
-                            className="context-input"
-                            rows="3"
-                        />
+                        <div className="input-group">
+                            <label htmlFor="quiz-context">Additional Context</label>
+                            <textarea
+                                id="quiz-context"
+                                value={quizContext}
+                                onChange={(e) => setQuizContext(e.target.value)}
+                                placeholder="Provide context to help generate better questions (e.g., what this course is about, what topics to focus on, etc.)"
+                                className="context-input"
+                                rows="3"
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
                 {/* Drop Zone */}
                 <div
                     className={`drop-zone ${dragActive ? 'active' : ''}`}
@@ -209,8 +206,8 @@ function UploadPage({ onUploadComplete }) {
                 >
                     <Upload size={48} className="upload-icon" />
                     <h3>Drag & drop lecture slides / notes here <span style={{
-                            color: "red"
-                        }}>*</span></h3>
+                        color: "red"
+                    }}>*</span></h3>
                     <p>or click to browse</p>
                     <span className="file-types">Supported: PDF</span>
                     <input
@@ -226,16 +223,7 @@ function UploadPage({ onUploadComplete }) {
                 {/* Files List */}
                 {files.length > 0 && (
                     <div className="files-section">
-                        <div className="files-header">
-                            <h3>Files Ready to Upload ({files.length})</h3>
-                            <button
-                                className="upload-button"
-                                onClick={uploadFiles}
-                                disabled={files.every(f => f.status !== 'ready')}
-                            >
-                                Upload All
-                            </button>
-                        </div>
+
 
                         <div className="files-list">
                             {files.map(fileObj => (
@@ -290,7 +278,7 @@ function UploadPage({ onUploadComplete }) {
                     onClick={handleCreateSession}
                     disabled={!canCreateSession()}
                 >
-                    Create Quiz Session
+                    {isInSession ? 'Add Files to Session' : 'Create Quiz Session'}
                 </button>
                 {!canCreateSession() && (
                     <p className="validation-message">

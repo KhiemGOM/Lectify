@@ -37,7 +37,6 @@ body {
 .upload-container {
   display: flex;
   min-height: 100vh;
-  width: 100vw;
   background: var(--bg-secondary);
 }
 
@@ -54,7 +53,10 @@ body {
   height: 100vh;
   overflow-y: auto;
 }
-
+.active {
+  background: var(--primary-blue);
+  color: white;
+}
 .logo h1 {
   font-size: 32px;
   font-weight: 700;

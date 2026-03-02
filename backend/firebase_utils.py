@@ -29,8 +29,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, Sequence, Tuple
 
 import firebase_admin
-from firebase_admin import credentials
-from google.cloud import firestore
+from firebase_admin import credentials, firestore
 
 
 Filter = Tuple[str, str, Any]  # (field, op, value)
