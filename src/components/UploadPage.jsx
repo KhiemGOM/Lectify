@@ -117,7 +117,7 @@ function UploadPage({ onUploadComplete, isInSession }) {
                 const apiData = await uploadSlides(fileObj.file);
 
                 uploadedFiles.push({
-                    fileId: apiData.file_id,
+                    fileId: apiData.slide_id,
                     filename: fileObj.name,
                     chunks: apiData.chunks || [],
                 });

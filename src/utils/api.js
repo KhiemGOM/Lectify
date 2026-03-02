@@ -1,10 +1,10 @@
 /* ── api.js — REST API client for the FastAPI backend ── */
 
-const API_BASE = 'http://127.0.0.1:8000';
+export const API_BASE = 'http://127.0.0.1:8000';
 
 /**
  * Upload a file to the backend.
- * Returns { file_id, filename, chunks: [{chunk_id, content, summary}] }
+ * Returns { slide_id, filename, file_type, chunks: [{chunk_id, file_id, filename, chunk_begin, chunk_end, summary}] }
  */
 export async function uploadSlides(file, userId = 'default_user', subjectId = 'default_subject') {
   const url = `${API_BASE}/slides?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
@@ -24,28 +24,35 @@ export async function uploadSlides(file, userId = 'default_user', subjectId = 'd
 }
 
 /**
- * Generate a single quiz question from a stored chunk.
- * slideId    — file_id returned by POST /slides
- * chunkIndex — 0-based index into that file's chunks array
+ * Generate a single quiz question from chunk text.
+ * fileId   — slide_id returned by POST /slides
+ * chunk    — chunk object from upload response ({chunk_id, summary, ...})
  * Returns { question_id, raw: { metadata, question_text, options, answer } }
  */
 export async function generateQuestion(
-  slideId,
-  chunkIndex,
+  fileId,
+  chunk,
   topicType = 'Theory',
   formatType = 'MCQ',
   userId = 'default_user',
   subjectId = 'default_subject',
 ) {
+  const chunkText = String(chunk?.summary ?? '').trim();
+  if (!chunkText) {
+    throw new Error('Cannot generate question: selected chunk has no summary text.');
+  }
+
   const url = `${API_BASE}/quiz/generate?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      slide_id: slideId,
-      chunk_index: chunkIndex,
+      chunk_text: chunkText,
+      file_id: fileId,
+      chunk_id: chunk?.chunk_id ?? null,
       topic_type: topicType,
       format_type: formatType,
+      model_name: 'gpt-4o-mini',
     }),
   });
 
@@ -59,15 +66,13 @@ export async function generateQuestion(
 
 /**
  * Grade a quiz answer on the backend.
- * timeStart / timeEnd — ISO-8601 strings marking when the question was shown / answered.
- * Returns { score: 0-10 }
+ * Returns { attempt_id, question_id, score, max_score }
  */
 export async function gradeAnswer(
   questionId,
   userAnswer,
   questionType = 'MCQ',
-  timeStart = new Date().toISOString(),
-  timeEnd = new Date().toISOString(),
+  fileId = null,
   userId = 'default_user',
   subjectId = 'default_subject',
 ) {
@@ -78,9 +83,9 @@ export async function gradeAnswer(
     body: JSON.stringify({
       question_id: questionId,
       user_answer: String(userAnswer),
-      time_start: timeStart,
-      time_end: timeEnd,
       question_type: questionType,
+      file_id: fileId,
+      model_name: 'gpt-4o-mini',
     }),
   });
 

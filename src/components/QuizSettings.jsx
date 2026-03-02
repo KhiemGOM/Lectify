@@ -56,9 +56,9 @@ export default function QuizSettings({ session }) {
         const fileObj = sessionFiles[i % sessionFiles.length];
         const settingsType = validTypes[i % validTypes.length];
         const apiFormat = toApiFormat(settingsType);
-        // Cycle through available chunks for this file
-        const chunkIndex = fileObj.chunks.length > 0 ? i % fileObj.chunks.length : 0;
-        return generateQuestion(fileObj.fileId, chunkIndex, "Theory", apiFormat)
+        // Cycle through available chunks for this file and pass chunk payload expected by backend.
+        const chunk = fileObj.chunks.length > 0 ? fileObj.chunks[i % fileObj.chunks.length] : null;
+        return generateQuestion(fileObj.fileId, chunk, "Theory", apiFormat)
           .then((res) => mapApiQuestion(res, settingsType))
           .catch((err) => {
             console.error("Question generation failed:", err);

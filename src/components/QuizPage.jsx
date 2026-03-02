@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/QuizPage.css';
 import { gradeQuiz, QUIZ_RESULTS_KEY } from '../utils/quizData';
+import { gradeAnswer } from '../utils/api';
 
 const TYPE_LABELS = {
   MCQ: 'Multiple Choice',
@@ -36,6 +37,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit }) {
   const [submitted, setSubmitted] = useState(false);
   const [quizResults, setQuizResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(
     settings.timeLimitOn ? settings.timeLimitMins * 60 : null
   );
@@ -89,12 +91,9 @@ export default function QuizPage({ quizMeta, settings, questions, onExit }) {
   /* ── Auto-submit when time runs out ── */
   useEffect(() => {
     if (settings.timeLimitOn && secondsLeft === 0 && !submitted) {
-      const results = gradeQuiz(userAnswersRef.current, questions);
-      setSubmitted(true);
-      setQuizResults(results);
-      setShowResults(true);
+      void handleSubmit(true);
     }
-  }, [secondsLeft]);
+  }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── KaTeX + highlight.js after each render ── */
   useEffect(() => {
@@ -145,24 +144,66 @@ export default function QuizPage({ quizMeta, settings, questions, onExit }) {
     setTimeout(() => panelRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
   };
 
-  const handleSubmit = (autoSubmit = false) => {
-    if (submitted) return;
+  const gradeWithBackend = async () => {
+    const gradedEntries = await Promise.all(
+      questions.map(async (question) => {
+        const rawUserAnswer = userAnswersRef.current[question.id];
+        let userAnswer;
+
+        if (question.type === 'TEXT') {
+          userAnswer = String(rawUserAnswer ?? '');
+        } else if (question.type === 'MULTI') {
+          userAnswer = Array.isArray(rawUserAnswer)
+            ? rawUserAnswer.join(',')
+            : String(rawUserAnswer ?? '');
+        } else {
+          userAnswer = String(rawUserAnswer ?? '');
+        }
+
+        try {
+          const result = await gradeAnswer(
+            question.id,
+            userAnswer,
+            question.type,
+          );
+          const score = Number(result?.score ?? 0);
+          return [question.id, { correct: score >= 10, score }];
+        } catch (_) {
+          return [question.id, { correct: false, score: 0 }];
+        }
+      })
+    );
+
+    const results = Object.fromEntries(gradedEntries);
+    const total = questions.length;
+    const totalScore = questions.reduce((sum, question) => sum + (results[question.id]?.score || 0), 0);
+    const correct = questions.filter((question) => results[question.id]?.correct).length;
+    const score_pct = total > 0 ? Math.round((totalScore / (total * 10)) * 1000) / 10 : 0;
+
+    return { score_pct, correct, total, results };
+  };
+
+  const handleSubmit = async (autoSubmit = false) => {
+    if (submitted || submitting) return;
     if (!autoSubmit) {
       const unanswered = total - Object.keys(userAnswers).length;
       if (unanswered > 0) {
         if (!window.confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
       }
     }
-    const results = gradeQuiz(userAnswers, questions);
+    setSubmitting(true);
+    const results = await gradeWithBackend();
     setSubmitted(true);
     setQuizResults(results);
     setShowResults(true);
+    setSubmitting(false);
   };
 
   const handleRetry = () => {
     setUserAnswers({});
     setCurrent(0);
     setSubmitted(false);
+    setSubmitting(false);
     setQuizResults(null);
     setShowResults(false);
     if (settings.timeLimitOn) setSecondsLeft(settings.timeLimitMins * 60);
@@ -402,8 +443,8 @@ export default function QuizPage({ quizMeta, settings, questions, onExit }) {
             </button>
           )}
           {isLast && !submitted && (
-            <button className="qp-btn qp-btn-success" onClick={() => handleSubmit(false)}>
-              Submit ✓
+            <button className="qp-btn qp-btn-success" onClick={() => void handleSubmit(false)} disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit ✓'}
             </button>
           )}
           {submitted && (

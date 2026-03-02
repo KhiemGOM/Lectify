@@ -1,59 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE } from '../utils/api';
 
-/* ── Mock data (replace with real API calls once backend is live) ── */
-
-function daysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString();
+function safeJson(res) {
+  if (!res.ok) {
+    return res.text().then((text) => {
+      throw new Error(text || `HTTP ${res.status}`);
+    });
+  }
+  return res.json();
 }
 
-const FILES = [
-  { id: 'f1', name: 'Cardiology Lecture 1.pdf' },
-  { id: 'f2', name: 'Calculus Chapter 3.pdf' },
-  { id: 'f3', name: 'Python Fundamentals.pdf' },
-  { id: 'f4', name: 'Organic Chemistry.pdf' },
-];
+function toFileModel(file) {
+  return {
+    id: file.file_id,
+    name: file.filename,
+  };
+}
 
-const QUIZZES = [
-  { id: 'q1', title: 'Cardiology Quiz', sourceFileId: 'f1' },
-  { id: 'q2', title: 'Calculus Quiz',   sourceFileId: 'f2' },
-  { id: 'q3', title: 'Python Quiz',     sourceFileId: 'f3' },
-  { id: 'q4', title: 'Chemistry Quiz',  sourceFileId: 'f4' },
-];
+function toQuizModel(question) {
+  const title = (question.question_text || '').slice(0, 80) || 'Quiz Question';
+  return {
+    id: question.question_id,
+    title,
+    sourceFileId: question.file_id || '',
+  };
+}
 
-const ATTEMPTS = [
-  { id: 'a1',  quizId: 'q1', sourceFileId: 'f1', scorePercent: 62, timeTakenSeconds: 420, attemptedAt: daysAgo(1)  },
-  { id: 'a2',  quizId: 'q2', sourceFileId: 'f2', scorePercent: 78, timeTakenSeconds: 380, attemptedAt: daysAgo(2)  },
-  { id: 'a3',  quizId: 'q1', sourceFileId: 'f1', scorePercent: 71, timeTakenSeconds: 390, attemptedAt: daysAgo(3)  },
-  { id: 'a4',  quizId: 'q3', sourceFileId: 'f3', scorePercent: 85, timeTakenSeconds: 300, attemptedAt: daysAgo(4)  },
-  { id: 'a5',  quizId: 'q4', sourceFileId: 'f4', scorePercent: 55, timeTakenSeconds: 510, attemptedAt: daysAgo(5)  },
-  { id: 'a6',  quizId: 'q1', sourceFileId: 'f1', scorePercent: 80, timeTakenSeconds: 350, attemptedAt: daysAgo(7)  },
-  { id: 'a7',  quizId: 'q2', sourceFileId: 'f2', scorePercent: 90, timeTakenSeconds: 280, attemptedAt: daysAgo(12) },
-  { id: 'a8',  quizId: 'q3', sourceFileId: 'f3', scorePercent: 72, timeTakenSeconds: 330, attemptedAt: daysAgo(15) },
-  { id: 'a9',  quizId: 'q4', sourceFileId: 'f4', scorePercent: 68, timeTakenSeconds: 450, attemptedAt: daysAgo(20) },
-  { id: 'a10', quizId: 'q1', sourceFileId: 'f1', scorePercent: 88, timeTakenSeconds: 310, attemptedAt: daysAgo(25) },
-];
+function toAttemptModel(attempt) {
+  return {
+    id: attempt.attempt_id,
+    quizId: attempt.question_id,
+    sourceFileId: attempt.file_id || '',
+    scorePercent: Number(attempt.score || 0) * 10,
+    timeTakenSeconds: 0,
+    attemptedAt: attempt.attempted_at,
+  };
+}
 
-const MOCK_DATA = {
-  userId: 'student01',
-  files: FILES,
-  quizzes: QUIZZES,
-  attempts: ATTEMPTS,
-};
-
-export function useUserAnalytics() {
-  const [data, setData]       = useState(null);
+export function useUserAnalytics(userId = 'default_user', subjectId = 'default_subject') {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setData(MOCK_DATA);
-      setLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, []);
+    let cancelled = false;
+    const qs = `?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [filesRes, questionsRes, attemptsRes] = await Promise.all([
+          fetch(`${API_BASE}/slides${qs}`).then(safeJson),
+          fetch(`${API_BASE}/questions${qs}`).then(safeJson),
+          fetch(`${API_BASE}/attempts${qs}`).then(safeJson),
+        ]);
+
+        if (cancelled) return;
+        setData({
+          userId,
+          files: Array.isArray(filesRes) ? filesRes.map(toFileModel) : [],
+          quizzes: Array.isArray(questionsRes) ? questionsRes.map(toQuizModel) : [],
+          attempts: Array.isArray(attemptsRes) ? attemptsRes.map(toAttemptModel) : [],
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to load analytics');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, subjectId]);
 
   return { data, loading, error };
 }
