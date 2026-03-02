@@ -26,3 +26,4 @@ export async function authenticateUser(userId, password) {
     console.log('No such document!');
   }
 }
+

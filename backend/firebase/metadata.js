@@ -23,3 +23,4 @@ export async function getUserMetadata(userId) {
     throw new Error('Could not find record.');
   }
 }
+
