@@ -493,7 +493,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
         <div className="qp-text-wrap">
           <div className="qp-text-label">Your answer</div>
 
-          {q.metadata?.["FORMAT"] === "TEXT" && (
+          {q.format === "TEXT" && (
               <input
                   type="text"
                   value={uaText}
@@ -505,12 +505,12 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
                     padding: '2px 4px',    // reduce vertical padding
                     fontSize: '14px',      // adjust if needed
                     lineHeight: '1.5',     // ensures text is centered
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
                   }}
               />
           )}
 
-          {q.metadata?.["FORMAT"] === "LATEX" && (
+          {q.format === "LATEX" && (
               <MathQuillInput
                   key={q.id}
                   value={uaText}
@@ -519,7 +519,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
               />
           )}
 
-          {q.metadata?.["FORMAT"] === "CODE" && (
+          {q.format === "CODE" && (
               <Editor
                   value={uaText}
                   onValueChange={val => setAnswer(q.id, val)}
@@ -536,7 +536,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
           )}
 
           {/* Fallback to text input */}
-          {!["TEXT", "LATEX", "CODE"].includes(q.metadata?.["FORMAT"]) && (
+          {!["TEXT", "LATEX", "CODE"].includes(q.format) && (
               <input
                   type="text"
                   value={uaText}
