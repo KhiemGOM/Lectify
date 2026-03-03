@@ -71,10 +71,10 @@ Output format:
 <<!SLIDE:the slide number here>>
 <<!SLIDE:additional slide numbers if needed>>
 <<FORMAT:TEXT/LATEX/CODE>>
-Write the question text here
+Write the question text here.
 <</QUESTION>>
 <<ANSWER>>
-(Modal answer)
+Modal answer
 <</ANSWER>>
 
 <<!TOPIC>>topic 1<</!TOPIC>>
@@ -83,8 +83,10 @@ Write the question text here
 
 Rules:
 - Must strictly follow this token structure.
-- No extra text inside tokens.
-- Choose the format for the answer you expected correctly: TEXT is for generic plain text answer; LATEX is for maths expression, or result of calculation answer (a number); CODE is for code answer.
+- AI resoning should not appear within tokens ("<<" and ">>")
+- The question should be concise, specific, and clear in what directions and answers are expected. Do not phrase question generically.
+- The question should strictly be a constructed-response question
+- Choose the format for the answer you expected correctly: TEXT is for generic plain text answer; LATEX is ONLY for maths expression, or result of calculation answer (a number); CODE is for code answer.
 - MUST include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
 - Topics must be short, concise noun phrases.
 """
