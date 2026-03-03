@@ -143,6 +143,7 @@ async def upload_slides(
                     chunk_begin=chunk_begin,
                     chunk_end=chunk_end,
                     summary=summary,
+                    raw_text=chunk_text,
                 )
             )
 

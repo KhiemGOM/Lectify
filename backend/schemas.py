@@ -51,6 +51,7 @@ class ChunkResponse(BaseModel):
     chunk_begin: int
     chunk_end: int
     summary: str
+    raw_text: str = ""
 
 
 class FileUploadResponse(BaseModel):

@@ -39,7 +39,7 @@ export async function generateQuestion(
   userId = 'default_user',
   subjectId = 'default_subject',
 ) {
-  const chunkText = String(chunk?.summary ?? '').trim();
+  const chunkText = String(chunk?.raw_text || chunk?.summary || '').trim();
   if (!chunkText) {
     throw new Error('Cannot generate question: selected chunk has no summary text.');
   }
