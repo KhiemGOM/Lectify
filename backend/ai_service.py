@@ -22,7 +22,6 @@ def call_openai_model(
     model_name: str,
     *,
     temperature: float = 0.7,
-    max_tokens: int = 1024,
     system_prompt: str = "You are a helpful assistant.",
 ) -> str:
     response = client.chat.completions.create(
@@ -32,7 +31,6 @@ def call_openai_model(
             {"role": "user", "content": prompt},
         ],
         temperature=temperature,
-        max_tokens=max_tokens,
     )
     return response.choices[0].message.content or ""
 
@@ -140,7 +138,6 @@ Chunk content:
         prompt=prompt,
         model_name=model_name,
         temperature=0.0,
-        max_tokens=256,
     )
 
     return response.strip()
