@@ -3,6 +3,12 @@ import '../styles/QuizPage.css';
 import { QUIZ_RESULTS_KEY } from '../utils/quizData';
 import { gradeAnswer, API_BASE } from '../utils/api';
 
+import Editor from "react-simple-code-editor";
+import { highlight, languages } from "prismjs";
+
+// Optional: import Prism CSS for default styling
+import "prismjs/themes/prism.css";
+
 const TYPE_LABELS = {
   MCQ: 'Multiple Choice',
   TF: 'True / False',
@@ -77,7 +83,7 @@ function openSlideViewer(question, userId = 'default_user', subjectId = 'default
       d.innerHTML = '<p>Could not embed file. <a href="${fileUrl}" target="_blank">Open file directly</a></p>';
       document.body.appendChild(d);
     };
-  <\/script>
+  </script>
 </body>
 </html>`;
 
@@ -143,7 +149,7 @@ function openSlideViewer(question, userId = 'default_user', subjectId = 'default
   <script>
     const el = document.getElementById('slide-${targetSlide}');
     if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
-  <\/script>
+  </script>
 </body>
 </html>`;
 
@@ -484,26 +490,85 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
     //  add mathquill support latex if needed
     const uaText = typeof ua === 'string' ? ua : '';
     return (
-      <div className="qp-text-wrap">
-        <div className="qp-text-label">Your answer</div>
-        <MathQuillInput
-          key={q.id}
-          value={uaText}
-          disabled={submitted}
-          onChange={val => setAnswer(q.id, val)}
-        />
-        {submitted && (
-          <div className="qp-model-answer">
-            <div className="qp-model-answer-title">Model Answer</div>
-            <div className="qp-model-answer-text">{q.answer}</div>
-            {quizResults?.results?.[q.id] && (
-              <span className={`qp-score-chip ${quizResults.results[q.id].correct ? 'good' : 'bad'}`}>
-                {quizResults.results[q.id].correct ? 'Correct' : 'Incorrect'}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+        <div className="qp-text-wrap">
+          <div className="qp-text-label">Your answer</div>
+
+          {q.metadata?.["FORMAT"] === "TEXT" && (
+              <input
+                  type="text"
+                  value={uaText}
+                  disabled={submitted}
+                  onChange={e => setAnswer(q.id, e.target.value)}
+                  className="qp-text-input"
+                  style={{
+                    height: '1.5em',       // roughly one line of text
+                    padding: '2px 4px',    // reduce vertical padding
+                    fontSize: '14px',      // adjust if needed
+                    lineHeight: '1.5',     // ensures text is centered
+                    boxSizing: 'border-box'
+                  }}
+              />
+          )}
+
+          {q.metadata?.["FORMAT"] === "LATEX" && (
+              <MathQuillInput
+                  key={q.id}
+                  value={uaText}
+                  disabled={submitted}
+                  onChange={val => setAnswer(q.id, val)}
+              />
+          )}
+
+          {q.metadata?.["FORMAT"] === "CODE" && (
+              <Editor
+                  value={uaText}
+                  onValueChange={val => setAnswer(q.id, val)}
+                  highlight={code => highlight(code, languages.js, "js")} // optional, can be code => code
+                  padding={10}
+                  style={{
+                    fontFamily: '"Fira code", monospace',
+                    fontSize: 14,
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    minHeight: '120px',
+                  }}
+              />
+          )}
+
+          {/* Fallback to text input */}
+          {!["TEXT", "LATEX", "CODE"].includes(q.metadata?.["FORMAT"]) && (
+              <input
+                  type="text"
+                  value={uaText}
+                  disabled={submitted}
+                  onChange={e => setAnswer(q.id, e.target.value)}
+                  className="qp-text-input"
+                  style={{
+                    height: '1.5em',       // roughly one line of text
+                    padding: '2px 4px',    // reduce vertical padding
+                    fontSize: '14px',      // adjust if needed
+                    lineHeight: '1.5',     // ensures text is centered
+                    boxSizing: 'border-box'
+                  }}
+              />
+          )}
+
+          {submitted && (
+              <div className="qp-model-answer">
+                <div className="qp-model-answer-title">Model Answer</div>
+                <div className="qp-model-answer-text">{q.answer}</div>
+                {quizResults?.results?.[q.id] && (
+                    <span
+                        className={`qp-score-chip ${
+                            quizResults.results[q.id].correct ? 'good' : 'bad'
+                        }`}
+                    >
+          {quizResults.results[q.id].correct ? 'Correct' : 'Incorrect'}
+        </span>
+                )}
+              </div>
+          )}
+        </div>
     );
   };
 
