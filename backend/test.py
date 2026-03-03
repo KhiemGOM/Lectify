@@ -4,6 +4,7 @@ from io import BytesIO
 from fastapi import UploadFile
 
 from ai_service import generate_quiz_modular, generate_chunks, parse_metadata, parse_sections
+from model_config import DEFAULT_MODEL_NAME
 from document_processor import process_uploaded_file
 
 
@@ -50,7 +51,7 @@ async def test_chunk_generation(file_path: str):
     )
 
     # Generate chunks
-    raw_chunks = generate_chunks(slides_text, filename, model_name="gpt-4o-mini")
+    raw_chunks = generate_chunks(slides_text, filename, model_name=DEFAULT_MODEL_NAME)
 
     print("\n===== GENERATED CHUNKS =====")
     for i, chunk in enumerate(raw_chunks):
@@ -77,7 +78,7 @@ async def test_quiz_generation(file_path: str):
     slides_text = "\n".join(sec["content"] for sec in result["sections"])
 
     # Generate chunks
-    raw_chunks = generate_chunks(slides_text, filename, model_name="gpt-4o-mini")
+    raw_chunks = generate_chunks(slides_text, filename, model_name=DEFAULT_MODEL_NAME)
     first_chunk = raw_chunks[0]
 
     # Extract actual chunk content

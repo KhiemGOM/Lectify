@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from .model_config import DEFAULT_MODEL_NAME
+
 
 class SectionSchema(BaseModel):
     section_id: int
@@ -25,7 +27,7 @@ class GenerateQuizRequest(BaseModel):
     chunk_id: Optional[str] = None
     topic_type: str = "Theory"  # "Theory" | "Applied"
     format_type: str = "MCQ"  # "MCQ" | "TEXT"
-    model_name: str = "gpt-4o-mini"
+    model_name: str = DEFAULT_MODEL_NAME
     user_id: str = "default_user"
     subject_id: str = "default_subject"
 
@@ -37,7 +39,7 @@ class SubmitAnswerRequest(BaseModel):
     user_answer: str
     question_type: str = "MCQ"  # "MCQ" | "TF" | "MULTI" | "TEXT"
     file_id: Optional[str] = None
-    model_name: str = "gpt-4o-mini"
+    model_name: str = DEFAULT_MODEL_NAME
     user_id: str = "default_user"
     subject_id: str = "default_subject"
 

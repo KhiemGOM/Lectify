@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any, Dict, Tuple
 from openai import OpenAI
 from .prompts import build_chunk_request, build_quiz_prompt, build_grade_prompt
+from .model_config import DEFAULT_MODEL_NAME
 from dotenv import load_dotenv
 
 
@@ -94,7 +95,7 @@ def parse_metadata(section_text: str) -> Tuple[Dict[str, Any], str]:
 def generate_chunks(
         slides_text: str,
         file_name: str,
-        model_name: str = "gpt-4o-mini",
+        model_name: str = DEFAULT_MODEL_NAME,
         max_retries: int = 10,
 ):
     """
@@ -122,7 +123,7 @@ def generate_chunks(
     )
 
 
-def generate_summary(chunk_text: str, model_name: str = "gpt-4o-mini") -> str:
+def generate_summary(chunk_text: str, model_name: str = DEFAULT_MODEL_NAME) -> str:
     """
     Sends a chunk of text to AI and returns a short summary string.
     """
@@ -148,7 +149,7 @@ def generate_quiz_modular(
         chunk_text: str,
         topic_type: str = "Theory",
         format_type: str = "MCQ",
-        model_name: str = "gpt-4o-mini",
+        model_name: str = DEFAULT_MODEL_NAME,
         max_retries: int = 10,
 ):
     """
@@ -242,7 +243,7 @@ def grade_nonmcq_quiz(
     question: str,
     correct_answer: str,
     user_answer: str,
-    model_name: str = "gpt-4o-mini",
+    model_name: str = DEFAULT_MODEL_NAME,
 ):
     prompt = build_grade_prompt(question, correct_answer, user_answer)
     response = call_openai_model(
@@ -258,7 +259,7 @@ def grade_quiz(
         raw_quiz_text: str,
         user_answer: str,
         question_type: str = "MCQ",
-        model_name: str = "gpt-4o-mini",
+        model_name: str = DEFAULT_MODEL_NAME,
 ):
     correct_answer = parse_sections(raw_quiz_text, "ANSWER", repeatable=False) or ""
 
