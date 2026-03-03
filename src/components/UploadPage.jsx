@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react'
 import '../styles/UploadPage.css'
-import { Upload, X, FileText, Image as ImageIcon, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, CheckCircle, AlertCircle, Loader, Trash2 } from 'lucide-react';
 import { uploadSlides } from '../utils/api';
+import LoadingModal from './LoadingModal';
 
 function SkeletonQuestionCard() {
   return (
@@ -22,7 +23,7 @@ function SkeletonQuestionCard() {
   );
 }
 
-function UploadPage({ onUploadComplete, isInSession, userId = 'default_user', subjectId = null, sessionFiles = [] }) {
+function UploadPage({ onUploadComplete, isInSession, userId = 'default_user', subjectId = null, sessionFiles = [], onDeleteFile }) {
     const [files, setFiles] = useState([]);
     const [dragActive, setDragActive] = useState(false);
     const [quizTitle, setQuizTitle] = useState('');
@@ -57,15 +58,14 @@ function UploadPage({ onUploadComplete, isInSession, userId = 'default_user', su
         const resolvedSubjectId = subjectId ?? String(Date.now());
 
         uploadFiles(resolvedSubjectId).then((apiData) => {
+            // Clear the form after upload completes so the loading modal stays visible during upload
+            setFiles([]);
+            setQuizTitle('');
+            setQuizContext('');
             if (onUploadComplete) {
                 onUploadComplete(title, fileCount, apiData, resolvedSubjectId);
             }
         });
-
-        // Clear the form for next session
-        setFiles([]);
-        setQuizTitle('');
-        setQuizContext('');
     };
     const handleDrag = (e) => {
         e.preventDefault();
@@ -179,6 +179,9 @@ function UploadPage({ onUploadComplete, isInSession, userId = 'default_user', su
     };
     return (
         <div className="content-area">
+            {files.some(f => f.status === 'uploading') && (
+                <LoadingModal message="Uploading and processing files…" />
+            )}
             <div className="upload-section">
                 {!isInSession && (
                     <>
@@ -243,7 +246,17 @@ function UploadPage({ onUploadComplete, isInSession, userId = 'default_user', su
                                         </div>
                                     </div>
                                     <div className="file-actions">
-                                        <CheckCircle size={20} className="success-icon" />
+                                        {onDeleteFile ? (
+                                            <button
+                                                className="file-delete-btn"
+                                                onClick={() => onDeleteFile(f.fileId)}
+                                                title="Remove file"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        ) : (
+                                            <CheckCircle size={20} className="success-icon" />
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -30,6 +30,8 @@ from .firebase_utils import (
     upsert_chunk,
     upsert_doc,
     upsert_raw_file,
+    delete_doc,
+    _doc_id,
 )
 from .schemas import (
     AnalyticsSummary,
@@ -275,6 +277,34 @@ def get_slide_file(
             "Cache-Control": "private, max-age=3600",
         },
     )
+
+
+@router.delete("/slides/{slide_id}", status_code=204)
+def delete_slide(
+    slide_id: str,
+    user_id: str = Query(default="default_user"),
+    subject_id: str = Query(default="default_subject"),
+):
+    """Delete a file and all its chunks."""
+    row = get_raw_file(user_id=user_id, subject_id=subject_id, file_id=slide_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Slide not found")
+
+    # Delete all chunks for this file
+    chunk_rows = list_chunks(user_id=user_id, subject_id=subject_id, file_id=slide_id)
+    for chunk in chunk_rows:
+        doc_id = chunk.get("id", "")
+        if doc_id:
+            delete_doc(COLL.chunks, doc_id)
+
+    # Delete the raw_file document
+    delete_doc(COLL.raw_files, _doc_id(user_id, subject_id, slide_id))
+
+    # Remove disk cache if present
+    file_type = row.get("file_type", "pdf")
+    disk_path = _FILES_DIR / f"{slide_id}.{file_type}"
+    if disk_path.exists():
+        disk_path.unlink()
 
 
 @router.post("/quiz/generate", response_model=QuestionResponse)

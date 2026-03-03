@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase/firebaseConfig';
-import { saveSubject, loadSubjects } from './firebase/subjects';
+import { saveSubject, loadSubjects, deleteSubject } from './firebase/subjects';
 import './styles/UploadPage.css';
 import './styles/LoginPage.css';
 import SideBar from './components/SideBar';
@@ -12,6 +12,8 @@ import QuizPage from './components/QuizPage';
 import AnalyticsPage from './components/AnalyticsPage';
 import LoginPage from './components/LoginPage';
 import { QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY } from './utils/quizData';
+import { deleteFile } from './utils/api';
+import LoadingModal from './components/LoadingModal';
 
 const App = () => {
   // ── All hooks must be called unconditionally at the top ───────────────────
@@ -38,6 +40,7 @@ const App = () => {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [lastQuizResults, setLastQuizResults] = useState(null);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(null);
 
   // Listen for Firebase auth state
   useEffect(() => {
@@ -114,6 +117,52 @@ const App = () => {
     saveSubject(user.uid, newSession).catch(console.error);
   };
 
+  const handleDeleteFile = async (sessionId, fileId) => {
+    const session = uploadSessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    setLoadingMessage('Deleting file…');
+    try {
+      await deleteFile(fileId, user.uid, String(sessionId));
+    } catch (err) {
+      console.error('Failed to delete file from backend:', err);
+    }
+
+    const updatedSession = {
+      ...session,
+      files: session.files.filter(f => f.fileId !== fileId),
+      fileCount: Math.max(0, session.fileCount - 1),
+    };
+
+    setUploadSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+    saveSubject(user.uid, updatedSession).catch(console.error);
+    setLoadingMessage(null);
+  };
+
+  const handleDeleteSubject = async (sessionId) => {
+    const session = uploadSessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    setLoadingMessage('Deleting subject…');
+    try {
+      await Promise.all(
+        (session.files || []).map(f =>
+          deleteFile(f.fileId, user.uid, String(sessionId)).catch(console.error)
+        )
+      );
+      await deleteSubject(user.uid, sessionId);
+    } catch (err) {
+      console.error('Failed to delete subject:', err);
+    }
+
+    setUploadSessions(prev => prev.filter(s => s.id !== sessionId));
+    if (currentSessionId === sessionId) {
+      setCurrentSessionId(null);
+      setActiveTab('upload');
+    }
+    setLoadingMessage(null);
+  };
+
   // ── Auth guards ───────────────────────────────────────────────────────────
   if (user === undefined) {
     return (
@@ -145,6 +194,7 @@ const App = () => {
 
   return (
     <div className="upload-container">
+      {loadingMessage && <LoadingModal message={loadingMessage} />}
       <SideBar
         handleNewSession={() => {
           setCurrentSessionId(null);
@@ -156,6 +206,7 @@ const App = () => {
         }}
         currentSessionId={currentSessionId}
         uploadSessions={uploadSessions}
+        onDeleteSubject={handleDeleteSubject}
       />
 
       <main className="main-content">
@@ -204,6 +255,7 @@ const App = () => {
             userId={user.uid}
             subjectId={currentSessionId ?? null}
             sessionFiles={uploadSessions.find(s => s.id === currentSessionId)?.files ?? []}
+            onDeleteFile={(fileId) => handleDeleteFile(currentSessionId, fileId)}
           />
         )}
         {activeTab === 'quiz' && (

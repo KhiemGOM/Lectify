@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "../styles/QuizSettings.css";
 import { getAllMockQuestions, buildQuestions, QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY } from "../utils/quizData";
 import { generateQuestion, mapApiQuestion } from "../utils/api";
+import LoadingModal from "./LoadingModal";
 
 export default function QuizSettings({ session, userId = 'default_user' }) {
   const [numQuestions, setNumQuestions] = useState(10);
@@ -107,8 +108,7 @@ export default function QuizSettings({ session, userId = 'default_user' }) {
 
   return (
     <div className="qs-page">
-
-      {/* Page header */}
+      {generating && <LoadingModal message="Generating quiz questions…" />}
       <div className="qs-header">
         <div className="qs-title">Quiz Settings</div>
         <div className="qs-subtitle">Configure your quiz before you start</div>

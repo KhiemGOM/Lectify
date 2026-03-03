@@ -84,6 +84,19 @@ export async function generateQuestion(
 }
 
 /**
+ * Delete an uploaded file and all its chunks from the backend.
+ */
+export async function deleteFile(fileId, userId = 'default_user', subjectId = 'default_subject') {
+  const url = `${API_BASE}/slides/${encodeURIComponent(fileId)}`
+    + `?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+  const res = await fetch(url, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    const detail = await res.text().catch(() => res.statusText);
+    throw new Error(`Delete file failed (${res.status}): ${detail}`);
+  }
+}
+
+/**
  * Grade a quiz answer on the backend.
  * Returns { attempt_id, question_id, score, max_score }
  */

@@ -103,6 +103,33 @@ body {
   transform: translateX(2px);
 }
 
+.session-delete-btn {
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.session-item:hover .session-delete-btn,
+.session-item.active .session-delete-btn {
+  display: flex;
+}
+
+.session-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
 .session-info {
   display: flex;
   flex-direction: column;
@@ -539,6 +566,25 @@ body {
 
 .success-icon {
   color: var(--success-green);
+}
+
+.file-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.file-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .error-icon {
