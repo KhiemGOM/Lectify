@@ -196,17 +196,18 @@ const App = () => {
     <div className="upload-container">
       {loadingMessage && <LoadingModal message={loadingMessage} />}
       <SideBar
-        handleNewSession={() => {
-          setCurrentSessionId(null);
-          setActiveTab('upload');
-        }}
-        setCurrentSessionId={(id) => {
-          setCurrentSessionId(id);
-          setActiveTab('quiz');
-        }}
-        currentSessionId={currentSessionId}
-        uploadSessions={uploadSessions}
-        onDeleteSubject={handleDeleteSubject}
+          handleNewSession={() => {
+            setCurrentSessionId(null);
+            setActiveTab('upload');
+          }}
+          setCurrentSessionId={(id) => {
+            setCurrentSessionId(id);
+            setLastQuizResults(null);
+            setActiveTab('quiz');
+          }}
+          currentSessionId={currentSessionId}
+          uploadSessions={uploadSessions}
+          onDeleteSubject={handleDeleteSubject}
       />
 
       <main className="main-content">
@@ -266,8 +267,9 @@ const App = () => {
                 onRetake={() => setLastQuizResults(null)}
               />
             : <QuizSettings
-                session={uploadSessions.find(s => s.id === currentSessionId)}
-                userId={user.uid}
+                  key={currentSessionId}
+                  session={uploadSessions.find(s => s.id === currentSessionId)}
+                  userId={user.uid}
               />
         )}
         {activeTab === 'analytics' && (

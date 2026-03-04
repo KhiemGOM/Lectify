@@ -84,7 +84,6 @@ function SideBar({ setCurrentSessionId, handleNewSession, uploadSessions, curren
                                             onClick={(e) => handleDeleteClick(e, session.id)}
                                             title="Delete subject"
                                             className="session-delete-btn"
-                                            style={{ color: isActive ? '#fff' : 'inherit' }}
                                         >
                                             ✕
                                         </button>
@@ -98,7 +97,7 @@ function SideBar({ setCurrentSessionId, handleNewSession, uploadSessions, curren
                         </div>
                     )}
                 </div>
-                <button className="new-session-btn" onClick={handleNewSession}>+ New Subject</button>
+                <button className="new-session-btn" onClick={handleNewSession} style={{ marginTop: 30 }}>+ New Subject</button>
             </div>
         </aside>
     )

@@ -4,24 +4,40 @@ import { getAllMockQuestions, buildQuestions, QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY
 import { generateQuestion, mapApiQuestion } from "../utils/api";
 import LoadingModal from "./LoadingModal";
 
+const getStored = (key, fallback) => {
+  try {
+    const v = localStorage.getItem('quizSettings_' + key);
+    return v !== null ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+};
+
+const usePersisted = (key, fallback) => {
+  const [val, setVal] = useState(() => getStored(key, fallback));
+  const set = (v) => { setVal(v); try { localStorage.setItem('quizSettings_' + key, JSON.stringify(v)); } catch {} };
+  return [val, set];
+};
+
 export default function QuizSettings({ session, userId = 'default_user' }) {
-  const [numQuestions, setNumQuestions] = useState(10);
-  const [difficulty, setDifficulty] = useState("Mixed");
-  const [types, setTypes] = useState(["MCQ", "TF", "MULTI", "TEXT"]);
-  const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timeMins, setTimeMins] = useState(15);
+
+  const prefix = `quizSettings_${session?.id ?? 'default'}_`;
+
+  const [numQuestions, setNumQuestions] = usePersisted(prefix + 'numQuestions', 10);
+  const [difficulty, setDifficulty] = usePersisted(prefix + 'difficulty', 'Mixed');
+  const [types, setTypes] = usePersisted(prefix + 'types', ['MCQ', 'TF', 'MULTI', 'TEXT']);
+  const [timerEnabled, setTimerEnabled] = usePersisted(prefix + 'timerEnabled', false);
+  const [timeMins, setTimeMins] = usePersisted(prefix + 'timeMins', 15);
   const [generating, setGenerating] = useState(false);
 
+
   const stepNum = (delta) => {
-    setNumQuestions((prev) => Math.max(1, Math.min(180, prev + delta)));
+    setNumQuestions(Math.max(1, Math.min(180, (numQuestions || 0) + delta)));
   };
 
   const toggleType = (type) => {
-    setTypes((prev) =>
-      prev.includes(type)
-        ? prev.filter((t) => t !== type)
-        : [...prev, type]
-    );
+    const next = types.includes(type)
+        ? types.filter((t) => t !== type)
+        : [...types, type];
+    setTypes(next);
   };
 
   const launchQuiz = async () => {
@@ -128,7 +144,13 @@ export default function QuizSettings({ session, userId = 'default_user' }) {
           </div>
           <div className="qs-stepper">
             <button className="qs-stepper-btn" onClick={() => stepNum(-1)}>−</button>
-            <span className="qs-stepper-val">{numQuestions}</span>
+            <input
+                type="number"
+                className="qs-stepper-val"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={(e) => setNumQuestions(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+            />
             <button className="qs-stepper-btn" onClick={() => stepNum(1)}>+</button>
           </div>
         </div>

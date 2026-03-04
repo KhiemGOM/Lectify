@@ -309,7 +309,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
   };
 
   const gradeWithBackend = async () => {
-    
+
     const pointsPerQuestion = questions.length > 0 ? 100 / questions.length : 0;
     const gradedEntries = await Promise.all(
       questions.map(async (question) => {
@@ -320,7 +320,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
           userAnswer = String(rawUserAnswer ?? '');
         } else if (question.type === 'MULTI') {
           userAnswer = Array.isArray(rawUserAnswer)
-            ? rawUserAnswer.join(',')
+            ? rawUserAnswer.join('')
             : String(rawUserAnswer ?? '');
         } else {
           userAnswer = String(rawUserAnswer ?? '');
@@ -338,7 +338,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
           const score = Number(result?.score ?? 0);
           const scaledScore = (score / 10) * pointsPerQuestion;
 
-          return [question.id, { correct: score >= 10, score: scaledScore }];
+          return [question.id, { correct: question.type === 'TEXT' ? score >= 5 : score >= 10, score: scaledScore }];
         } catch (_) {
           return [question.id, { correct: false, score: 0 }];
         }
@@ -494,19 +494,12 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
           <div className="qp-text-label">Your answer</div>
 
           {q.format === "TEXT" && (
-              <input
-                  type="text"
+              <textarea
                   value={uaText}
                   disabled={submitted}
                   onChange={e => setAnswer(q.id, e.target.value)}
                   className="qp-text-input"
-                  style={{
-                    height: '1.5em',       // roughly one line of text
-                    padding: '2px 4px',    // reduce vertical padding
-                    fontSize: '14px',      // adjust if needed
-                    lineHeight: '1.5',     // ensures text is centered
-                    boxSizing: 'border-box',
-                  }}
+                  rows={3}
               />
           )}
 
@@ -537,19 +530,12 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
 
           {/* Fallback to text input */}
           {!["TEXT", "LATEX", "CODE"].includes(q.format) && (
-              <input
-                  type="text"
+              <textarea
                   value={uaText}
                   disabled={submitted}
                   onChange={e => setAnswer(q.id, e.target.value)}
                   className="qp-text-input"
-                  style={{
-                    height: '1.5em',       // roughly one line of text
-                    padding: '2px 4px',    // reduce vertical padding
-                    fontSize: '14px',      // adjust if needed
-                    lineHeight: '1.5',     // ensures text is centered
-                    boxSizing: 'border-box'
-                  }}
+                  rows={3}
               />
           )}
 
@@ -649,6 +635,14 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
               </button>
             )}
 
+            {submitted && quizResults?.results?.[q.id] && (
+                <div className="qp-question-score">
+                    <span className={`qp-score-chip ${quizResults.results[q.id].correct ? 'good' : 'bad'}`}>
+                      {quizResults.results[q.id].correct ? '✓' : '✘'} {Math.round(quizResults.results[q.id].score * 10) / 10} pts
+                    </span>
+                </div>
+            )}
+
             {/* Answer area */}
             {renderAnswerArea(q)}
 
@@ -700,11 +694,16 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
               {submitting ? 'Submitting...' : 'Submit ✓'}
             </button>
           )}
-          {submitted && (
-            <button className="qp-btn qp-btn-primary" onClick={() => setShowResults(true)}>
-              View Results
-            </button>
-          )}
+            {submitted && (
+                <>
+                    <button className="qp-btn qp-btn-primary" onClick={() => setShowResults(true)}>
+                        View Results
+                    </button>
+                    <button className="qp-btn qp-btn-primary" onClick={handleRetry}>
+                        ↩ Retry
+                    </button>
+                </>
+            )}
         </div>
         <span className="qp-footer-hint">
           {submitted ? 'Quiz submitted — review your answers above' : (HINTS[q.type] || '')}
@@ -733,7 +732,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
             </div>
             <div className="qp-results-actions">
               <button
-                className="qp-btn qp-btn-ghost"
+                className="qp-btn qp-btn-primary"
                 onClick={() => setShowResults(false)}
               >
                 Review Answers
@@ -742,7 +741,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
                 ↩ Retry
               </button>
               <button className="qp-btn qp-btn-ghost" onClick={handleExit}>
-                ← Settings
+                ← Back
               </button>
             </div>
           </div>

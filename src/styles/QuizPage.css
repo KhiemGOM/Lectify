@@ -361,7 +361,8 @@
 
 .qp-text-input {
   width: 100%;
-  min-height: 100px;
+  min-height: fit-content;
+  max-height: 500px;
   padding: 12px 14px;
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
@@ -373,6 +374,8 @@
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   line-height: 1.6;
+  field-sizing: content;
+  overflow-y: hidden;
 }
 
 .qp-text-input:focus {
