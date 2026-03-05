@@ -28,6 +28,7 @@ class GenerateQuizRequest(BaseModel):
     chunk_end: int
     topic_type: str = "Theory"
     format_type: str = "MCQ"
+    difficulty: str = "Medium"
     model_name: str = DEFAULT_MODEL_NAME
     user_id: str = "default_user"
     subject_id: str = "default_subject"

@@ -200,6 +200,7 @@ def build_quiz_prompt(
         chunk_text: str,
         topic_type: str,
         format_type: str,
+        difficulty: str,
 ) -> str:
     # Topic selection
     topic_prompt = THEORY_PROMPT if topic_type == "Theory" else APPLIED_PROMPT
@@ -217,7 +218,7 @@ def build_quiz_prompt(
 
     format_prompt = format_map[format_type]
     return f"""
-    You are a quiz-generating AI. You should only generate ONE question.
+    You are a quiz-generating AI. You should only generate ONE {difficulty} question.
     - The question should be related to the slides and you should be able to add citation back to the slides where the knowledge being tested come from using the <<!SLIDE:SLIDENUMBER>> token.
     - The metadata token <<!SLIDE:1/2/3/...>> (the "!") mean that you can add more than 1 slide in citation so please include all relevant slides in the question.
     - The content can span multiple slide but your question can focus on cross slide knowledge or just 1 sentence in 1 slide, it is up to you but please cite the slide number accordingly.
@@ -225,6 +226,8 @@ def build_quiz_prompt(
     - AI reasoning MUST appear outside the tokens.
     - AI MUST reason and plan the question and answer option before any token begin.
     - DO NOT include unnecessary whitespace character.
+    
+    This is supposed to be a {difficulty} question. Please adhere to this difficulty appropriately.
 
     {topic_prompt}
 

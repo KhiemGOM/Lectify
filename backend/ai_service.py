@@ -17,12 +17,12 @@ def get_openai_client(api_key: str | None = None) -> OpenAI:
 
 
 def call_openai_model(
-    client: OpenAI,
-    prompt: str,
-    model_name: str,
-    *,
-    temperature: float = 0.7,
-    system_prompt: str = "You are a helpful assistant.",
+        client: OpenAI,
+        prompt: str,
+        model_name: str,
+        *,
+        temperature: float = 0.7,
+        system_prompt: str = "You are a helpful assistant.",
 ) -> str:
     response = client.chat.completions.create(
         model=model_name,
@@ -90,6 +90,7 @@ def parse_metadata(section_text: str) -> Tuple[Dict[str, Any], str]:
 
     return final_metadata, remaining_text
 
+
 def generate_chunks(
         slides_text: str,
         file_name: str,
@@ -142,10 +143,12 @@ Chunk content:
 
     return response.strip()
 
+
 def generate_quiz_modular(
         chunk_text: str,
         topic_type: str = "Theory",
         format_type: str = "MCQ",
+        difficulty: str = "Medium",
         model_name: str = DEFAULT_MODEL_NAME,
         max_retries: int = 10,
 ):
@@ -153,9 +156,9 @@ def generate_quiz_modular(
     Sends a chunk to AI and returns a parsed quiz question.
     Retries if required tokens are missing.
     """
-    #print(chunk_text[:500])
-    prompt = build_quiz_prompt(chunk_text, topic_type, format_type)
-    # print(f"Prompt: \n{prompt}")
+    # print(chunk_text[:500])
+    prompt = build_quiz_prompt(chunk_text, topic_type, format_type, difficulty)
+    print(f"Prompt: \n{prompt}")
     for attempt in range(max_retries):
         response = call_openai_model(
             client=get_openai_client(),
@@ -205,13 +208,16 @@ def generate_quiz_modular(
         f"Failed to generate valid quiz tokens after {max_retries} attempts."
     )
 
+
 def _normalize_answer(ans: str) -> str:
     return "".join(sorted(ans.strip()))
+
 
 def grade_single_choice(correct_answer: str, user_answer: str) -> int:
     correct = correct_answer.strip()
     user = user_answer.strip()
     return 10 if user == correct else 0
+
 
 def grade_multi_answer(correct_answer: str, user_answer: str) -> int:
     correct_set = set(correct_answer.strip())
@@ -237,10 +243,10 @@ def grade_multi_answer(correct_answer: str, user_answer: str) -> int:
 
 
 def grade_nonmcq_quiz(
-    question: str,
-    correct_answer: str,
-    user_answer: str,
-    model_name: str = DEFAULT_MODEL_NAME,
+        question: str,
+        correct_answer: str,
+        user_answer: str,
+        model_name: str = DEFAULT_MODEL_NAME,
 ):
     prompt = build_grade_prompt(question, correct_answer, user_answer)
     response = call_openai_model(

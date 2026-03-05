@@ -33,8 +33,9 @@ export async function uploadSlides(file, userId = 'default_user', subjectId = 'd
 export async function generateQuestion(
   fileId,
   chunk,
-  topicType = 'Theory',
+  scopeType = 'Theory',
   formatType = 'MCQ',
+  difficulty = 'Medium',
   userId = 'default_user',
   subjectId = 'default_subject',
 ) {
@@ -52,8 +53,9 @@ export async function generateQuestion(
       chunk_id: chunk?.chunk_id ?? null,
       chunk_begin: chunk?.chunk_begin ?? null,
       chunk_end: chunk?.chunk_end ?? null,
-      topic_type: topicType,
+      topic_type: scopeType,
       format_type: formatType,
+      difficulty : difficulty,
       model_name: 'gpt-4o-mini',
       user_id: userId,
       subject_id: subjectId,

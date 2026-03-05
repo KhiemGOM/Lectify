@@ -381,6 +381,7 @@ def generate_question(
             chunk_text,
             payload.topic_type,
             payload.format_type,
+            payload.difficulty,
             payload.model_name,
         )
 
