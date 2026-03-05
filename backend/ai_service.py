@@ -154,7 +154,7 @@ def generate_quiz_modular(
     """
     # print(chunk_text[:500])
     prompt = build_quiz_prompt(chunk_text, topic_type, format_type, difficulty, context)
-    print(f"Prompt: \n{prompt}")
+    #print(f"Prompt: \n{prompt}")
     for attempt in range(max_retries):
         response = call_openai_model(
             client=get_openai_client(),
