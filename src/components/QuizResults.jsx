@@ -58,7 +58,7 @@ export default function QuizResults({ results, quizMeta, onRetake }) {
       {/* Actions */}
       <div className="qr-actions">
         <button className="qr-btn-primary" onClick={onRetake}>
-          Configure New Quiz
+          Make A New Quiz
         </button>
       </div>
 

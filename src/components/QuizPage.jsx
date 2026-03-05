@@ -602,7 +602,7 @@ export default function QuizPage({ quizMeta, settings, questions, onExit, userId
 
             {/* Card meta */}
             <div className="qp-card-meta">
-              <span className={`qp-type-badge qp-type-${q.type.toLowerCase()}`}>
+              <span className={`qp-type-badge qp-type-${q.type?.toLowerCase()}`}>
                 {TYPE_LABELS[q.type]}
               </span>
               {q.isRevisit && (

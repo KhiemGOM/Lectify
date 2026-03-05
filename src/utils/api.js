@@ -48,9 +48,10 @@ export async function generateQuestion(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      chunk_text: chunkText,
       file_id: fileId,
       chunk_id: chunk?.chunk_id ?? null,
+      chunk_begin: chunk?.chunk_begin ?? null,
+      chunk_end: chunk?.chunk_end ?? null,
       topic_type: topicType,
       format_type: formatType,
       model_name: 'gpt-4o-mini',
