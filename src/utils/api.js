@@ -118,6 +118,15 @@ export async function gradeAnswer(
   return res.json();
 }
 
+export async function downloadFile(fileId, userId, subjectId) {
+  const url = `${API_BASE}/files/${encodeURIComponent(fileId)}/download`
+      + `?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 /**
  * Convert an API quiz response into the QuizPage question format.
  *

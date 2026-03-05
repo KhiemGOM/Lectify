@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import '../styles/QuizPage.css';
 import {QUIZ_RESULTS_KEY} from '../utils/quizData';
-import {gradeAnswer, API_BASE} from '../utils/api';
+import {gradeAnswer, API_BASE, downloadFile} from '../utils/api';
 
 import Editor from "react-simple-code-editor";
 import {highlight, languages} from "prismjs";
@@ -44,17 +44,16 @@ const getQ = (questions, current) => {
     return q;
 };
 
-function openSlideViewer(question, userId = 'default_user', subjectId = 'default_subject') {
+async function openSlideViewer(question, userId = 'default_user', subjectId = 'default_subject') {
     const {fileId, slideNums, slideText, reference} = question;
 
     // If the original file is available, embed it in an iframe
     if (fileId) {
+        const fileUrl = await downloadFile(fileId, userId, subjectId);
         const targetPage = slideNums?.length > 0
             ? Math.min(...slideNums.map(Number).filter(n => !isNaN(n)))
             : 1;
-
-        const fileUrl = `${API_BASE}/files/${encodeURIComponent(fileId)}/download`
-            + `?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+        // rest stays the same, use fileUrl in iframe src
 
         const html = `<!DOCTYPE html>
 <html lang="en">

@@ -125,7 +125,6 @@ async def upload_file(
             user_id=user_id,
             subject_id=subject_id,
             file_id=file_id,
-            file=processed["raw_text"],
             filename=processed["filename"],
             file_type=processed["file_type"],
             raw_text=processed["raw_text"],
@@ -154,7 +153,7 @@ async def upload_file(
             chunk_end = _safe_int(token.get("CHUNKEND"), chunk_begin)
             chunk_begin = max(1, min(chunk_begin, max_section_id))
             chunk_end = max(chunk_begin, min(chunk_end, max_section_id))
-            summary = generate_summary(chunk_text) if chunk_text else ""
+            summary = generate_summary(slides_text) if slides_text else ""
 
             stage = "upsert_chunk"
             print(
@@ -181,7 +180,6 @@ async def upload_file(
                     chunk_begin=chunk_begin,
                     chunk_end=chunk_end,
                     summary=summary,
-                    raw_text=chunk_text,
                 )
             )
 

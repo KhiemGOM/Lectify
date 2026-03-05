@@ -75,13 +75,13 @@ def init_firebase_admin(*, service_account_path: str | None = None, project_id: 
         cred = credentials.Certificate(service_account_path)
         firebase_admin.initialize_app(cred, {
             "projectId": project_id,
-            "storageBucket": f"{project_id}.appspot.com"
+            "storageBucket": f"{project_id}.firebasestorage.app"
         })
         return
 
     firebase_admin.initialize_app(options={
         "projectId": project_id,
-        "storageBucket": f"{project_id}.appspot.com"
+        "storageBucket": f"{project_id}.firebasestorage.app"
     })
 
 
@@ -212,7 +212,6 @@ def upsert_raw_file(
         user_id: str,
         subject_id: str,
         file_id: str,
-        file: Any,
         filename: str | None = None,
         file_type: str | None = None,
         raw_text: str | None = None,
@@ -225,7 +224,6 @@ def upsert_raw_file(
         "user_id": user_id,
         "subject_id": subject_id,
         "file_id": file_id,
-        "file": file,
     }
     if filename is not None:
         payload["filename"] = filename

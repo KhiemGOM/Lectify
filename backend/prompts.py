@@ -89,6 +89,7 @@ Rules:
 - The question should strictly be a constructed-response question
 - Choose the format for the answer you expected correctly: TEXT is for generic plain text answer; LATEX is ONLY for maths expression, or result of calculation answer (a number); CODE is for code answer.
 - MUST include relevant <<!TOPIC>>...<</!TOPIC>> blocks.
+- Modal answer should directly answer the question, NOT what the criteria would be, such that if a student gave the same answer, you would grade it as correct.
 - Topics must be short, concise noun phrases.
 """
 
