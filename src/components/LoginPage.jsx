@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase/firebaseConfig';
 import '../styles/LoginPage.css';
@@ -12,10 +12,49 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const QUIZ_OPTIONS = [
+  'A. Calvin cycle in chloroplast stroma',
+  'B. Glycolysis in mitochondrial matrix',
+  'C. Electron transport chain at inner mitochondrial membrane',
+  'D. Fermentation in chloroplast thylakoids',
+];
+
 const LoginPage = ({ isAuthenticated = false, onEnterStudio }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [demoMode, setDemoMode] = useState('quiz');
+  const [isDemoHovered, setIsDemoHovered] = useState(false);
+  const [pickedOption, setPickedOption] = useState(null);
+  const [showQuizCta, setShowQuizCta] = useState(false);
+  const ctaTimerRef = useRef(null);
+  const returnTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (ctaTimerRef.current) {
+        window.clearTimeout(ctaTimerRef.current);
+      }
+      if (returnTimerRef.current) {
+        window.clearTimeout(returnTimerRef.current);
+      }
+    };
+  }, []);
+
+  const clearReturnTimer = () => {
+    if (returnTimerRef.current) {
+      window.clearTimeout(returnTimerRef.current);
+      returnTimerRef.current = null;
+    }
+  };
+
+  const scheduleReturnToNotes = (delayMs) => {
+    clearReturnTimer();
+    returnTimerRef.current = window.setTimeout(() => {
+      setIsDemoHovered(false);
+      setShowQuizCta(false);
+      setPickedOption(null);
+      returnTimerRef.current = null;
+    }, delayMs);
+  };
 
   const handleGoogleSignIn = async () => {
     if (isAuthenticated) {
@@ -83,48 +122,84 @@ const LoginPage = ({ isAuthenticated = false, onEnterStudio }) => {
               <span className="home-demo-dot home-demo-dot--red" />
               <span className="home-demo-dot home-demo-dot--yellow" />
               <span className="home-demo-dot home-demo-dot--green" />
-              <div className="home-demo-mode">
-                <button
-                  type="button"
-                  className={`home-demo-modeBtn${demoMode === 'notes' ? ' active' : ''}`}
-                  onClick={() => setDemoMode('notes')}
-                >
-                  Raw Notes
-                </button>
-                <button
-                  type="button"
-                  className={`home-demo-modeBtn${demoMode === 'quiz' ? ' active' : ''}`}
-                  onClick={() => setDemoMode('quiz')}
-                >
-                  Quiz View
-                </button>
-              </div>
+              <span className="home-demo-hint">Hover this card to preview quiz</span>
             </div>
             <div className="home-demo-body">
               <div className="home-demo-row">
                 <span className="home-demo-tag">Upload</span>
-                <span className="home-demo-line">Operating Systems Lecture 5.pdf</span>
+                <span className="home-demo-line">Biology Unit 4 - Cell Energy.pptx</span>
               </div>
               <div className="home-demo-row">
                 <span className="home-demo-tag">Generate</span>
-                <span className="home-demo-line">10 questions · Mixed difficulty</span>
+                <span className="home-demo-line">12 questions - Mixed difficulty</span>
               </div>
-              {demoMode === 'notes' ? (
-                <div className="home-demo-notes">
-                  <div className="home-demo-noteLine">• SJF minimizes average waiting time when burst estimates are accurate.</div>
-                  <div className="home-demo-noteLine">• FCFS can cause convoy effect with long CPU-bound jobs.</div>
-                  <div className="home-demo-noteLine">• RR improves responsiveness via fixed time quantum.</div>
-                  <div className="home-demo-noteLine">• Preemptive variants trade overhead for fairness.</div>
+
+              <div
+                className={`home-demo-singleFlip${isDemoHovered ? ' flipped' : ''}`}
+                onMouseEnter={() => {
+                  clearReturnTimer();
+                  setIsDemoHovered(true);
+                }}
+                onMouseLeave={() => {
+                  if (ctaTimerRef.current) {
+                    window.clearTimeout(ctaTimerRef.current);
+                    ctaTimerRef.current = null;
+                  }
+                  if (showQuizCta) {
+                    scheduleReturnToNotes(10000);
+                  } else {
+                    scheduleReturnToNotes(1000);
+                  }
+                }}
+              >
+                <div className="home-demo-singleFlipInner">
+                  <div className="home-demo-singleFace home-demo-singleFace--front">
+                    <div className="home-demo-notes">
+                      <div className="home-demo-noteLine home-demo-noteLine--title">Cell Energy Pathways</div>
+                      <div className="home-demo-noteLine">- Photosynthesis stores energy: light reaction makes ATP/NADPH, Calvin cycle fixes CO2.</div>
+                      <div className="home-demo-noteLine">- Respiration releases energy: glycolysis, Krebs cycle, electron transport chain.</div>
+                      <div className="home-demo-noteLine">- Highest ATP yield comes from oxidative phosphorylation via chemiosmosis.</div>
+                      <div className="home-demo-noteLine">- Oxygen is final electron acceptor in aerobic respiration and water is produced.</div>
+                      <div className="home-demo-noteLine">- Fermentation regenerates NAD+ without oxygen but produces far less ATP.</div>
+                      <div className="home-demo-noteLine">- Chloroplast captures photon energy; mitochondria convert fuel energy into ATP.</div>
+                      <div className="home-demo-noteLine home-demo-noteLine--title">Exam cues: pathway location, inputs/outputs, ATP efficiency.</div>
+                    </div>
+                  </div>
+
+                  <div className="home-demo-singleFace home-demo-singleFace--back">
+                    {!showQuizCta ? (
+                      <div className="home-demo-quiz home-demo-quiz--interactive">
+                        <div className="home-demo-qtitle">Q: Which step produces the highest ATP yield in aerobic respiration?</div>
+                        {QUIZ_OPTIONS.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            className={`home-demo-opt home-demo-opt-btn${pickedOption === option ? ' chosen' : ''}`}
+                            onClick={() => {
+                              if (ctaTimerRef.current) {
+                                window.clearTimeout(ctaTimerRef.current);
+                              }
+                              setPickedOption(option);
+                              ctaTimerRef.current = window.setTimeout(() => {
+                                setShowQuizCta(true);
+                                ctaTimerRef.current = null;
+                              }, 220);
+                            }}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="home-demo-quizCta">
+                        <p className="home-demo-quizCta-kicker">Nice pick.</p>
+                        <p>Try making your own quiz from your slides.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="home-demo-quiz">
-                  <div className="home-demo-qtitle">Q: Which scheduler minimizes average wait time?</div>
-                  <div className="home-demo-opt">A. FCFS</div>
-                  <div className="home-demo-opt active">B. SJF</div>
-                  <div className="home-demo-opt">C. Round Robin</div>
-                  <div className="home-demo-opt">D. EDF</div>
-                </div>
-              )}
+              </div>
+
               <div className="home-demo-stats">
                 <div className="home-demo-stat"><strong>82%</strong><span>Rolling avg</span></div>
                 <div className="home-demo-stat"><strong>+7pp</strong><span>Improvement</span></div>

@@ -515,7 +515,14 @@ export default function AnalyticsPage({ userId = "default_user", subjectId = "de
               />
               <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
               <Tooltip
-                contentStyle={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border-color)", fontSize: 13 }}
+                contentStyle={{
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border-color)",
+                  backgroundColor: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  fontSize: 13,
+                }}
+                cursor={{ fill: "var(--table-row-hover)" }}
                 labelFormatter={(v) => new Date(v).toLocaleString()}
               />
               <Line type="monotone" dataKey="rolling_avg" stroke="var(--primary-blue)" dot={false} strokeWidth={2.4} />
@@ -553,16 +560,33 @@ export default function AnalyticsPage({ userId = "default_user", subjectId = "de
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis
                   dataKey="slide"
-                  tickFormatter={(v) => `S${v}`}
                   tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
+                  label={{
+                    value: "Slide number",
+                    position: "insideBottom",
+                    offset: -4,
+                    fill: "var(--text-secondary)",
+                    fontSize: 11,
+                  }}
                 />
                 <YAxis
-                  domain={[0, 100]}
+                  domain={[0, (dataMax) => {
+                    const max = Number(dataMax ?? 0);
+                    if (!Number.isFinite(max)) return 100;
+                    return Math.min(100, Math.max(10, Math.ceil(max + 5)));
+                  }]}
                   tickFormatter={(v) => `${v}%`}
                   tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border-color)", fontSize: 13 }}
+                  contentStyle={{
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-color)",
+                    backgroundColor: "var(--bg-primary)",
+                    color: "var(--text-primary)",
+                    fontSize: 13,
+                  }}
+                  cursor={{ fill: "var(--table-row-hover)" }}
                   formatter={(v, _, row) => [`${v}%`, `Slide ${row?.payload?.slide}`]}
                 />
                 <Bar dataKey="coverage_percent" fill="var(--primary-blue)" radius={[4, 4, 0, 0]} />

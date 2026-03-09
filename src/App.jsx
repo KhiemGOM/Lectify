@@ -16,6 +16,15 @@ import { deleteFile, deleteSubject, loadSubjects, saveSubject } from './utils/ap
 import LoadingModal from './components/LoadingModal';
 
 const APP_PATH = '/studio';
+const THEME_STORAGE_KEY = 'lectify-theme';
+const FALLBACK_THEME = 'light';
+
+const getInitialTheme = () => {
+  if (typeof window === 'undefined') return FALLBACK_THEME;
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 const App = () => {
   // ── All hooks must be called unconditionally at the top ───────────────────
@@ -44,6 +53,7 @@ const App = () => {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(null);
   const [showUploadComposer, setShowUploadComposer] = useState(false);
+  const [theme, setTheme] = useState(getInitialTheme);
 
   // Listen for Firebase auth state
   useEffect(() => {
@@ -52,6 +62,12 @@ const App = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     if (quizWindowData) return;
@@ -108,6 +124,8 @@ const App = () => {
 
   const isInActiveSession = uploadSessions.length > 0 && currentSessionId !== null;
   const showUploadTab = isInActiveSession || showUploadComposer;
+  const toggleTheme = () => setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUploadComplete = (title, fileCount, apiData, subjectId, context) => {
@@ -201,8 +219,8 @@ const App = () => {
   // ── Auth guards ───────────────────────────────────────────────────────────
   if (user === undefined) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'login-spin 0.7s linear infinite' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid var(--border-color)', borderTopColor: 'var(--primary-blue)', borderRadius: '50%', animation: 'login-spin 0.7s linear infinite' }} />
       </div>
     );
   }
@@ -302,6 +320,31 @@ const App = () => {
             <span style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)', marginRight: 10 }}>
               {user.displayName || user.email}
             </span>
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${nextTheme} mode`}
+              title={`Switch to ${nextTheme} mode`}
+            >
+              {theme === 'dark' ? (
+                <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4" />
+                  <line x1="12" y1="2" x2="12" y2="5" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                  <line x1="2" y1="12" x2="5" y2="12" />
+                  <line x1="19" y1="12" x2="22" y2="12" />
+                  <line x1="4.22" y1="4.22" x2="6.34" y2="6.34" />
+                  <line x1="17.66" y1="17.66" x2="19.78" y2="19.78" />
+                  <line x1="4.22" y1="19.78" x2="6.34" y2="17.66" />
+                  <line x1="17.66" y1="6.34" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+                </svg>
+              )}
+            </button>
             <button
               onClick={() => signOut(auth)}
               style={{ fontSize: 13, padding: '6px 14px', background: 'transparent', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary, #64748b)' }}

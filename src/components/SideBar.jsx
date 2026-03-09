@@ -46,27 +46,11 @@ function SideBar({
                             return (
                                 <div
                                     key={session.id}
-                                    className={`session-item ${isActive ? 'active' : ''}`}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 0,
-                                        padding: 0,
-                                        backgroundColor: isActive ? '#e2e8f0' : 'transparent',
-                                        borderRadius: 8,
-                                    }}
+                                    className={`session-item session-row ${isActive ? 'active' : ''}`}
                                 >
                                     <button
                                         onClick={() => setCurrentSessionId(session.id)}
-                                        style={{
-                                            flex: 1,
-                                            background: 'none',
-                                            border: 'none',
-                                            padding: '10px 12px',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            color: isActive ? '#fff' : 'inherit',
-                                        }}
+                                        className="session-select-btn"
                                     >
                                         <div className="session-info">
                                             <span className="session-name">{session.name}</span>
@@ -75,18 +59,18 @@ function SideBar({
                                     </button>
 
                                     {confirmingDelete === session.id ? (
-                                        <div style={{ display: 'flex', gap: 4, padding: '0 8px', flexShrink: 0 }}>
+                                        <div className="session-delete-confirm">
                                             <button
                                                 onClick={(e) => handleConfirmDelete(e, session.id)}
                                                 title="Confirm delete"
-                                                style={{ fontSize: 11, padding: '3px 7px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+                                                className="session-confirm-btn session-confirm-btn-danger"
                                             >
                                                 Delete
                                             </button>
                                             <button
                                                 onClick={handleCancelDelete}
                                                 title="Cancel"
-                                                style={{ fontSize: 11, padding: '3px 7px', background: 'transparent', color: 'var(--text-secondary, #64748b)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 4, cursor: 'pointer' }}
+                                                className="session-confirm-btn session-confirm-btn-neutral"
                                             >
                                                 Cancel
                                             </button>
@@ -109,7 +93,21 @@ function SideBar({
                         </div>
                     )}
                 </div>
-                <button className="new-session-btn" onClick={handleNewSession} style={{ marginTop: 30 }}>+ New Subject</button>
+                <button className="new-session-btn" onClick={handleNewSession}>
+                    <svg
+                        className="new-session-icon"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                    >
+                        <line x1="8" y1="3" x2="8" y2="13" />
+                        <line x1="3" y1="8" x2="13" y2="8" />
+                    </svg>
+                    <span>New Subject</span>
+                </button>
             </div>
         </aside>
     )

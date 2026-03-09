@@ -626,7 +626,7 @@
 .qp-results-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(248, 250, 252, 0.92);
+  background: var(--glass-overlay);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
