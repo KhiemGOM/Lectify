@@ -68,13 +68,21 @@ def init_firebase_admin(*, service_account_path: str | None = None, project_id: 
     service_account_path = service_account_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     project_id = project_id or os.getenv("FIREBASE_PROJECT_ID") or "dlwsus"
 
+    creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    if creds_json:
+        import json
+        cred = credentials.Certificate(json.loads(creds_json))
+        firebase_admin.initialize_app(cred, {
+            "projectId": project_id,
+            "storageBucket": f"{project_id}.firebasestorage.app"
+        })
+        return
+
     if service_account_path:
-        # Resolve relative paths against the backend/ directory
         resolved = Path(service_account_path)
         if not resolved.is_absolute():
             resolved = Path(__file__).parent / resolved
-        service_account_path = str(resolved)
-        cred = credentials.Certificate(service_account_path)
+        cred = credentials.Certificate(str(resolved))
         firebase_admin.initialize_app(cred, {
             "projectId": project_id,
             "storageBucket": f"{project_id}.firebasestorage.app"
