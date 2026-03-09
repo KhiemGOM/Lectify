@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import "../styles/QuizSettings.css";
-import {getAllMockQuestions, buildQuestions, QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY} from "../utils/quizData";
+import {QUIZ_RESULTS_KEY, QUIZ_STORAGE_KEY} from "../utils/quizData";
 import {fetchFailedQuestions, generateQuestion, mapApiQuestion} from "../utils/api";
 import LoadingModal from "./LoadingModal";
 import Slider from "rc-slider";
@@ -23,8 +23,8 @@ const snapRevisitPercent = (value) => {
     const n = Number(value);
     if (Number.isNaN(n)) return 0;
     return REVISIT_STOPS.reduce((best, cur) =>
-        Math.abs(cur - n) < Math.abs(best - n) ? cur : best
-    , REVISIT_STOPS[0]);
+            Math.abs(cur - n) < Math.abs(best - n) ? cur : best
+        , REVISIT_STOPS[0]);
 };
 
 const getStored = (key, fallback) => {

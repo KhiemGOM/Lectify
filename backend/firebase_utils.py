@@ -29,8 +29,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple
 
-from dotenv import load_dotenv
 import firebase_admin
+from dotenv import load_dotenv
 from firebase_admin import credentials, firestore, storage
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -452,7 +452,7 @@ def upsert_attempt(
         "answer": answer,
         "user_answer": user_answer,
         "score": int(score),
-        "correct" : correct,
+        "correct": correct,
         "question_type": question_type,
         "attempted_at": attempted_at,
     }
@@ -556,7 +556,7 @@ def upsert_subject(
         raise ValueError("session.id is required")
 
     payload = {
-        "userId": user_id,   # legacy/frontend-compatible field
+        "userId": user_id,  # legacy/frontend-compatible field
         "user_id": user_id,  # backend-style field for consistency
         **session,
     }

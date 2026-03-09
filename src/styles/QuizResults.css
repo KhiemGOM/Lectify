@@ -1,153 +1,166 @@
 /* QuizResults.css — Results summary shown in the main app after quiz closes */
 
 .qr-page {
-  max-width: 560px;
-  margin: 48px auto;
-  padding: 0 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
+    max-width: 560px;
+    margin: 48px auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
 }
 
 /* ── Header ── */
 .qr-header {
-  text-align: center;
+    text-align: center;
 }
 
 .qr-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
 }
 
 .qr-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-top: 4px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
 }
 
 /* ── Score ── */
 .qr-score-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 36px 52px;
-  box-shadow: var(--shadow-sm);
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 36px 52px;
+    box-shadow: var(--shadow-sm);
+    width: 100%;
 }
 
 .qr-score {
-  font-size: 80px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -3px;
-  color: var(--primary-blue);
+    font-size: 80px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -3px;
+    color: var(--primary-blue);
 }
 
-.qr-score.great { color: var(--success-green); }
-.qr-score.ok    { color: var(--primary-blue); }
-.qr-score.low   { color: var(--error-red); }
+.qr-score.great {
+    color: var(--success-green);
+}
+
+.qr-score.ok {
+    color: var(--primary-blue);
+}
+
+.qr-score.low {
+    color: var(--error-red);
+}
 
 .qr-score-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
 }
 
 .qr-badge {
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  padding: 3px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 3px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
 }
 
 /* ── Stats ── */
 .qr-stats {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 20px 0;
-  width: 100%;
-  box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px 0;
+    width: 100%;
+    box-shadow: var(--shadow-sm);
 }
 
 .qr-stat {
-  flex: 1;
-  text-align: center;
+    flex: 1;
+    text-align: center;
 }
 
 .qr-stat-divider {
-  width: 1px;
-  height: 40px;
-  background: var(--border-color);
+    width: 1px;
+    height: 40px;
+    background: var(--border-color);
 }
 
 .qr-stat-num {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-  margin-bottom: 4px;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
 }
 
-.qr-stat-num.correct { color: var(--success-green); }
-.qr-stat-num.wrong   { color: var(--error-red); }
+.qr-stat-num.correct {
+    color: var(--success-green);
+}
+
+.qr-stat-num.wrong {
+    color: var(--error-red);
+}
 
 .qr-stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
 }
 
 /* ── Message ── */
 .qr-message {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-  line-height: 1.6;
-  max-width: 380px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.6;
+    max-width: 380px;
 }
 
 /* ── Actions ── */
 .qr-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 
 .qr-btn-primary {
-  padding: 11px 28px;
-  background: var(--primary-blue);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+    padding: 11px 28px;
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
 }
 
 .qr-btn-primary:hover {
-  background: var(--primary-blue-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+    background: var(--primary-blue-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }

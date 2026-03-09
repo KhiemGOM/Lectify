@@ -1,6 +1,6 @@
-import React, {useState, useRef} from 'react'
+import React, {useRef, useState} from 'react'
 import '../styles/UploadPage.css'
-import {Upload, X, FileText, CheckCircle, AlertCircle, Loader, Trash2} from 'lucide-react';
+import {AlertCircle, CheckCircle, FileText, Loader, Trash2, Upload, X} from 'lucide-react';
 import {uploadSlides} from '../utils/api';
 import LoadingModal from './LoadingModal';
 

@@ -1,85 +1,85 @@
 :root,
 [data-theme='light'] {
-  --primary-blue: #1d4ed8;
-  --primary-blue-dark: #1e40af;
-  --accent-blue: #3b82f6;
-  --success-green: #10b981;
-  --error-red: #ef4444;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --border-color: #e2e8f0;
-  --session-active-bg: #e2e8f0;
-  --session-active-text: #0f172a;
-  --overlay-bg: rgba(15, 23, 42, 0.55);
-  --glass-bg: rgba(255, 255, 255, 0.86);
-  --glass-overlay: rgba(248, 250, 252, 0.92);
-  --table-row-hover: rgba(29, 78, 216, 0.08);
-  --table-row-active: rgba(29, 78, 216, 0.14);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  color-scheme: light;
+    --primary-blue: #1d4ed8;
+    --primary-blue-dark: #1e40af;
+    --accent-blue: #3b82f6;
+    --success-green: #10b981;
+    --error-red: #ef4444;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --border-color: #e2e8f0;
+    --session-active-bg: #e2e8f0;
+    --session-active-text: #0f172a;
+    --overlay-bg: rgba(15, 23, 42, 0.55);
+    --glass-bg: rgba(255, 255, 255, 0.86);
+    --glass-overlay: rgba(248, 250, 252, 0.92);
+    --table-row-hover: rgba(29, 78, 216, 0.08);
+    --table-row-active: rgba(29, 78, 216, 0.14);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    color-scheme: light;
 }
 
 [data-theme='dark'] {
-  --primary-blue: #60a5fa;
-  --primary-blue-dark: #3b82f6;
-  --accent-blue: #93c5fd;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --bg-primary: #0f172a;
-  --bg-secondary: #020617;
-  --bg-tertiary: #1e293b;
-  --border-color: #334155;
-  --session-active-bg: #1e3a8a;
-  --session-active-text: #f8fafc;
-  --overlay-bg: rgba(2, 6, 23, 0.75);
-  --glass-bg: rgba(15, 23, 42, 0.82);
-  --glass-overlay: rgba(2, 6, 23, 0.78);
-  --table-row-hover: rgba(59, 130, 246, 0.16);
-  --table-row-active: rgba(59, 130, 246, 0.24);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.65);
-  color-scheme: dark;
+    --primary-blue: #60a5fa;
+    --primary-blue-dark: #3b82f6;
+    --accent-blue: #93c5fd;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --bg-primary: #0f172a;
+    --bg-secondary: #020617;
+    --bg-tertiary: #1e293b;
+    --border-color: #334155;
+    --session-active-bg: #1e3a8a;
+    --session-active-text: #f8fafc;
+    --overlay-bg: rgba(2, 6, 23, 0.75);
+    --glass-bg: rgba(15, 23, 42, 0.82);
+    --glass-overlay: rgba(2, 6, 23, 0.78);
+    --table-row-hover: rgba(59, 130, 246, 0.16);
+    --table-row-active: rgba(59, 130, 246, 0.24);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.65);
+    color-scheme: dark;
 }
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  min-height: 100%;
+    min-height: 100%;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0;
+    min-width: 320px;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
-  color: var(--primary-blue);
-  text-decoration: none;
+    color: var(--primary-blue);
+    text-decoration: none;
 }
 
 button {
-  font-family: inherit;
+    font-family: inherit;
 }
 
 .session-item button:focus {
-  outline: none;
+    outline: none;
 }

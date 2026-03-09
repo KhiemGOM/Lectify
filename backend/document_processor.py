@@ -1,10 +1,11 @@
-from fastapi import UploadFile, HTTPException
-from typing import Dict, List
 from io import BytesIO
+from typing import Dict, List
 
 import fitz  # PyMuPDF
-from pptx import Presentation
 from docx import Document
+from fastapi import UploadFile, HTTPException
+from pptx import Presentation
+
 
 def extract_pdf(file_bytes):
     text = ""
@@ -16,17 +17,19 @@ def extract_pdf(file_bytes):
 
     return text
 
+
 def extract_pptx(file_bytes):
     prs = Presentation(BytesIO(file_bytes))
     text = ""
 
     for i, slide in enumerate(prs.slides):
-        text += f"\n\n---SLIDE_{i+1}---\n\n"
+        text += f"\n\n---SLIDE_{i + 1}---\n\n"
         for shape in slide.shapes:
             if hasattr(shape, "text"):
                 text += shape.text + "\n"
 
     return text
+
 
 def extract_docx(file_bytes):
     doc = Document(BytesIO(file_bytes))
@@ -37,14 +40,16 @@ def extract_docx(file_bytes):
 
     return text
 
+
 def extract_txt(file_bytes):
     return file_bytes.decode("utf-8")
 
-def clean_text(text: str):
 
+def clean_text(text: str):
     text = text.replace("\r", "")
     text = text.strip()
     return text
+
 
 def split_into_sections(text: str, file_type: str) -> List[Dict]:
     sections = []
@@ -68,6 +73,7 @@ def split_into_sections(text: str, file_type: str) -> List[Dict]:
         })
 
     return sections
+
 
 async def process_uploaded_file(file: UploadFile) -> Dict:
     """

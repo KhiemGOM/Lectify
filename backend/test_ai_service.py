@@ -1,7 +1,6 @@
-import unittest
 import sys
+import unittest
 from pathlib import Path
-
 
 # Ensure project root is importable so `import backend.*` works whether the test is
 # run as a module or as a direct script.

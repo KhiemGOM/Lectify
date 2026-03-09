@@ -6,8 +6,10 @@ source-of-truth for what lands in each collection.
 """
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
+
 from typing import List, Optional, Dict, Any
+
+from pydantic import BaseModel, Field
 
 
 # ── Firestore document shapes (reference) ─────────────────────────────────────
@@ -73,10 +75,10 @@ class SectionSchema(BaseModel):
 class GenerateQuizRequest(BaseModel):
     """POST /quiz/generate — generate one question from a chunk of text."""
     chunk_text: str = Field(min_length=1)
-    file_id: Optional[str] = None       # stored on the resulting question doc
-    chunk_id: Optional[str] = None      # stored on the resulting question doc
-    topic_type: str = "Theory"          # "Theory" | "Applied"
-    format_type: str = "MCQ"            # "MCQ" | "TEXT"
+    file_id: Optional[str] = None  # stored on the resulting question doc
+    chunk_id: Optional[str] = None  # stored on the resulting question doc
+    topic_type: str = "Theory"  # "Theory" | "Applied"
+    format_type: str = "MCQ"  # "MCQ" | "TEXT"
     model_name: str = "gpt-4o-mini"
 
 
@@ -84,8 +86,8 @@ class SubmitAnswerRequest(BaseModel):
     """POST /quiz/answer — submit and grade a single answer."""
     question_id: str
     user_answer: str
-    question_type: str = "MCQ"          # "MCQ" | "TF" | "MULTI" | "TEXT"
-    file_id: Optional[str] = None       # stored on the attempt doc
+    question_type: str = "MCQ"  # "MCQ" | "TF" | "MULTI" | "TEXT"
+    file_id: Optional[str] = None  # stored on the attempt doc
     model_name: str = "gpt-4o-mini"
 
 
@@ -103,7 +105,7 @@ class ChunkResponse(BaseModel):
 
 class FileUploadResponse(BaseModel):
     """Response from POST /slides."""
-    slide_id: str                       # alias for file_id (kept for frontend compat)
+    slide_id: str  # alias for file_id (kept for frontend compat)
     filename: str
     file_type: str
     chunks: List[ChunkResponse]

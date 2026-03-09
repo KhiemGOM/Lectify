@@ -621,6 +621,7 @@ def get_failed_questions(payload: FailedQuestionsRequest):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+
 @router.post("/attempts", response_model=AttemptResponse)
 def submit_attempt(
         payload: SubmitAnswerRequest,
@@ -631,7 +632,6 @@ def submit_attempt(
     question = get_past_quiz_by_id(payload.question_id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-
 
     score = grade_quiz(
         question=question.get("question_text", ""),

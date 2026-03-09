@@ -35,7 +35,6 @@ class GenerateQuizRequest(BaseModel):
     subject_id: str = "default_subject"
 
 
-
 class SubmitAnswerRequest(BaseModel):
     """POST /quiz/answer - submit and grade a single answer."""
 
@@ -150,6 +149,7 @@ class AnalyticsSummary(BaseModel):
     best_score: int
     total_questions_generated: int
     total_files_uploaded: int
+
 
 class FailedQuestionsRequest(BaseModel):
     user_id: str

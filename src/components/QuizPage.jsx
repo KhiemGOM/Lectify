@@ -1,7 +1,7 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import '../styles/QuizPage.css';
 import {QUIZ_RESULTS_KEY} from '../utils/quizData';
-import {gradeAnswer, API_BASE, downloadFile} from '../utils/api';
+import {downloadFile, gradeAnswer} from '../utils/api';
 
 import Editor from "react-simple-code-editor";
 import {highlight, languages} from "prismjs";
@@ -66,12 +66,12 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
             }
         }
         if (fileUrl) {
-        const targetPage = slideNums?.length > 0
-            ? Math.min(...slideNums.map(Number).filter(n => !isNaN(n)))
-            : 1;
-        // rest stays the same, use fileUrl in iframe src
+            const targetPage = slideNums?.length > 0
+                ? Math.min(...slideNums.map(Number).filter(n => !isNaN(n)))
+                : 1;
+            // rest stays the same, use fileUrl in iframe src
 
-        const html = `<!DOCTYPE html>
+            const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -109,24 +109,24 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
 </body>
 </html>`;
 
-        const popupWidth = window.screen?.availWidth || 1280;
-        const popupHeight = window.screen?.availHeight || 860;
-        const win = window.open(
-            '',
-            '_blank',
-            `width=${popupWidth},height=${popupHeight},left=0,top=0,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`,
-        );
-        if (win) {
-            win.document.write(html);
-            win.document.close();
-            try {
-                win.moveTo(0, 0);
-                win.resizeTo(popupWidth, popupHeight);
-            } catch (_) {
-                // Browser may block move/resize calls.
+            const popupWidth = window.screen?.availWidth || 1280;
+            const popupHeight = window.screen?.availHeight || 860;
+            const win = window.open(
+                '',
+                '_blank',
+                `width=${popupWidth},height=${popupHeight},left=0,top=0,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`,
+            );
+            if (win) {
+                win.document.write(html);
+                win.document.close();
+                try {
+                    win.moveTo(0, 0);
+                    win.resizeTo(popupWidth, popupHeight);
+                } catch (_) {
+                    // Browser may block move/resize calls.
+                }
             }
-        }
-        return;
+            return;
         }
     }
 

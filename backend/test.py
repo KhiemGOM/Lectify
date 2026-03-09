@@ -1,12 +1,11 @@
-import asyncio
 from io import BytesIO
 
 from dotenv import load_dotenv
 from fastapi import UploadFile
 
-from firebase_utils import query_docs, COLL
-from model_config import DEFAULT_MODEL_NAME
 from document_processor import process_uploaded_file
+from model_config import DEFAULT_MODEL_NAME
+
 
 class FakeUploadFile(UploadFile):
     """
@@ -36,6 +35,7 @@ async def test_file_processing(file_path: str):
     print("\nFirst section preview:")
     print(result["sections"][1]["content"][:5000])
 
+
 async def test_chunk_generation(file_path: str):
     # Simulate upload
     with open(file_path, "rb") as f:
@@ -55,17 +55,18 @@ async def test_chunk_generation(file_path: str):
 
     print("\n===== GENERATED CHUNKS =====")
     for i, chunk in enumerate(raw_chunks):
-        print(f"\n--- Chunk {i+1} ---")
+        print(f"\n--- Chunk {i + 1} ---")
         print("Metadata:", chunk.get("metadata", chunk))
         begin_idx = int(chunk["CHUNKBEGIN"])
         end_idx = int(chunk["CHUNKEND"])
 
         chunk_content = "\n\n".join(
-            f"Slide {i+1}:\n{sec['content']}"
-            for i, sec in enumerate(result["sections"][begin_idx:end_idx+1], start=begin_idx)
+            f"Slide {i + 1}:\n{sec['content']}"
+            for i, sec in enumerate(result["sections"][begin_idx:end_idx + 1], start=begin_idx)
         )
 
         print("Content preview:", chunk_content[:500])
+
 
 async def test_quiz_generation(file_path: str):
     with open(file_path, "rb") as f:
@@ -87,8 +88,8 @@ async def test_quiz_generation(file_path: str):
 
     # Grab all the slides in that chunk
     chunk_content = "\n\n".join(
-        f"Slide {i+1}:\n{sec['content']}"
-        for i, sec in enumerate(result["sections"][begin_idx:end_idx+1], start=begin_idx)
+        f"Slide {i + 1}:\n{sec['content']}"
+        for i, sec in enumerate(result["sections"][begin_idx:end_idx + 1], start=begin_idx)
     )
 
     # Generate quiz
@@ -99,6 +100,7 @@ async def test_quiz_generation(file_path: str):
     print("Options:", quiz["options"])
     print("Answer:", quiz["answer"])
     print("Metadata:", quiz["metadata"])
+
 
 from firebase_utils import query_docs, init_firebase_admin, COLL
 

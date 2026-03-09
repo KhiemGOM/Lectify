@@ -1,6 +1,7 @@
 # Lectify
 
-Lectify is an AI-powered study app that turns uploaded learning materials into quizzes, tracks performance, and highlights what to review next.
+Lectify is an AI-powered study app that turns uploaded learning materials into quizzes, tracks performance, and
+highlights what to review next.
 
 ## What It Does
 
@@ -44,6 +45,7 @@ FIREBASE_PROJECT_ID=your_firebase_project_id
 ```
 
 Notes:
+
 - `VITE_API_BASE` is used by the frontend.
 - Backend requires `OPENAI_API_KEY` for generation/grading.
 - Backend uses Firebase Admin credentials via `GOOGLE_APPLICATION_CREDENTIALS`.
@@ -77,6 +79,7 @@ npm run dev:full
 ```
 
 Default URLs:
+
 - Frontend: `http://localhost:5173`
 - Backend: `http://127.0.0.1:8000`
 - Backend docs: `http://127.0.0.1:8000/docs`
@@ -102,10 +105,10 @@ This keeps Vercel focused on static/frontend hosting while the Python API runs o
 ## Troubleshooting
 
 - Popup blocked for quiz/citation:
-  - Allow popups for your local/site origin.
+    - Allow popups for your local/site origin.
 - Backend starts but generation fails:
-  - Check `OPENAI_API_KEY`.
+    - Check `OPENAI_API_KEY`.
 - Backend cannot read/write Firebase:
-  - Check `GOOGLE_APPLICATION_CREDENTIALS` and `FIREBASE_PROJECT_ID`.
+    - Check `GOOGLE_APPLICATION_CREDENTIALS` and `FIREBASE_PROJECT_ID`.
 - Frontend cannot reach backend:
-  - Check `VITE_API_BASE` and backend URL/port.
+    - Check `VITE_API_BASE` and backend URL/port.

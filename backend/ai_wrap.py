@@ -16,10 +16,10 @@ from .firebase_utils import (
 
 
 def fetch_file(
-    *,
-    user_id: str,
-    subject_id: str,
-    file_id: str,
+        *,
+        user_id: str,
+        subject_id: str,
+        file_id: str,
 ) -> Optional[dict[str, Any]]:
     """
     Fetch a raw file document from Firestore.
@@ -31,10 +31,10 @@ def fetch_file(
 
 
 def fetch_file_chunks(
-    *,
-    user_id: str,
-    subject_id: str,
-    file_id: str,
+        *,
+        user_id: str,
+        subject_id: str,
+        file_id: str,
 ) -> list[dict[str, Any]]:
     """
     Fetch all chunks for a given file from Firestore.
@@ -46,10 +46,10 @@ def fetch_file_chunks(
 
 
 def fetch_file_with_chunks(
-    *,
-    user_id: str,
-    subject_id: str,
-    file_id: str,
+        *,
+        user_id: str,
+        subject_id: str,
+        file_id: str,
 ) -> Optional[dict[str, Any]]:
     """
     Fetch a raw file document together with all its chunks in one call.

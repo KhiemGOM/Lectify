@@ -1,14 +1,14 @@
-import React, { useState } from 'react'
+import React, {useState} from 'react'
 
 function SideBar({
-    setCurrentSessionId,
-    handleNewSession,
-    handleGoHome,
-    uploadSessions,
-    currentSessionId,
-    onDeleteSubject,
-    loadingSessions = false,
-}) {
+                     setCurrentSessionId,
+                     handleNewSession,
+                     handleGoHome,
+                     uploadSessions,
+                     currentSessionId,
+                     onDeleteSubject,
+                     loadingSessions = false,
+                 }) {
     const [confirmingDelete, setConfirmingDelete] = useState(null);
 
     const handleDeleteClick = (e, sessionId) => {
@@ -54,7 +54,8 @@ function SideBar({
                                     >
                                         <div className="session-info">
                                             <span className="session-name">{session.name}</span>
-                                            <span className="session-meta">{session.fileCount} files • {session.date}</span>
+                                            <span
+                                                className="session-meta">{session.fileCount} files • {session.date}</span>
                                         </div>
                                     </button>
 
@@ -103,8 +104,8 @@ function SideBar({
                         strokeLinecap="round"
                         aria-hidden="true"
                     >
-                        <line x1="8" y1="3" x2="8" y2="13" />
-                        <line x1="3" y1="8" x2="13" y2="8" />
+                        <line x1="8" y1="3" x2="8" y2="13"/>
+                        <line x1="3" y1="8" x2="13" y2="8"/>
                     </svg>
                     <span>New Subject</span>
                 </button>
