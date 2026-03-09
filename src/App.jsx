@@ -227,10 +227,14 @@ const App = () => {
 
   if (window.location.pathname === '/') {
     return (
-      <LoginPage
-        isAuthenticated={!!user}
-        onEnterStudio={() => window.location.assign(APP_PATH)}
-      />
+        <LoginPage
+            isAuthenticated={!!user}
+            onEnterStudio={() => window.location.assign(APP_PATH)}
+            user={user}
+            onSignOut={() => signOut(auth)}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+        />
     );
   }
 
