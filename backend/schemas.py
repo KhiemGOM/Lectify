@@ -158,3 +158,12 @@ class FailedQuestionsRequest(BaseModel):
     topic_types: list[str] | None = None
     difficulties: list[str] | None = None
     limit: int = 20
+
+
+class SubjectSession(BaseModel):
+    id: str
+    name: str = ""
+    date: str = ""
+    fileCount: int = 0
+    files: list[dict[str, Any]] = Field(default_factory=list)
+    context: str = ""

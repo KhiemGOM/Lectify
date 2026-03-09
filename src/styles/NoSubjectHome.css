@@ -1,0 +1,136 @@
+.nsh-shell {
+  min-height: calc(100vh - 160px);
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+}
+
+.nsh-hero {
+  width: min(860px, 100%);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 44px 36px 34px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.nsh-kicker {
+  margin: 0 auto 12px;
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-blue) 34%, transparent);
+  background: color-mix(in srgb, var(--primary-blue) 10%, transparent);
+  color: var(--primary-blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nsh-title {
+  margin: 0;
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.2;
+  color: var(--text-primary);
+  letter-spacing: -0.8px;
+}
+
+.nsh-subtitle {
+  margin: 14px auto 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+  max-width: 700px;
+}
+
+.nsh-actions {
+  margin-top: 26px;
+  display: flex;
+  justify-content: center;
+}
+
+.nsh-btn {
+  border: 0;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 14px 28px;
+  letter-spacing: -0.2px;
+}
+
+.nsh-btn-primary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-blue) 88%, #ffffff) 0%,
+    var(--primary-blue) 100%
+  );
+  color: #fff;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary-blue) 30%, transparent);
+}
+
+.nsh-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--primary-blue) 38%, transparent);
+}
+
+.nsh-tip {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.nsh-sectionTitle {
+  margin: 24px 0 10px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.nsh-steps {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nsh-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.nsh-step > span {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-blue) 15%, transparent);
+  color: var(--primary-blue);
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .nsh-shell {
+    min-height: calc(100vh - 120px);
+    padding: 18px 12px;
+  }
+
+  .nsh-hero {
+    padding: 30px 18px 24px;
+  }
+}

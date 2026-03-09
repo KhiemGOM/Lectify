@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import mimetypes
 import traceback
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -16,19 +17,22 @@ from .ai_service import (
     generate_chunks,
     generate_quiz_modular,
     generate_summary,
-    grade_nonmcq_quiz, grade_quiz,
+    grade_quiz,
 )
 from .document_processor import process_uploaded_file
 from .firebase_utils import (
     COLL,
+    delete_subject,
     get_past_quiz_by_id,
     get_raw_file,
+    list_subjects,
     list_attempts,
     list_chunks,
     query_docs,
     upsert_attempt,
     upsert_chunk,
     upsert_doc,
+    upsert_subject,
     upsert_raw_file,
     delete_doc,
     _doc_id,
@@ -48,7 +52,7 @@ from .schemas import (
     QuestionDetail,
     QuestionResponse,
     QuestionRaw,
-    SubmitAnswerRequest, FailedQuestionsRequest,
+    SubmitAnswerRequest, FailedQuestionsRequest, SubjectSession,
 )
 
 router = APIRouter(tags=["core"])
@@ -75,19 +79,180 @@ def _build_chunk_text(sections: list[dict], chunk_begin: int, chunk_end: int) ->
     ).strip()
 
 
-def fetch_file(*, user_id: str, subject_id: str, file_id: str) -> dict | None:
-    """
-    Fetch a raw file document together with all its chunks.
+def _score_to_percent(value: object) -> float:
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return max(0.0, min(100.0, n * 10.0))
 
-    Returns the file dict with a 'chunks' key added, or None if not found.
-    Each chunk dict contains: chunk_id, file_id, chunk_begin, chunk_end,
-    chunk_summary, raw_text, filename.
-    """
-    file_doc = get_raw_file(user_id=user_id, subject_id=subject_id, file_id=file_id)
-    if file_doc is None:
-        return None
-    chunks = list_chunks(user_id=user_id, subject_id=subject_id, file_id=file_id)
-    return {**file_doc, "chunks": chunks}
+
+def _parse_slide_refs(raw: object) -> list[int]:
+    if raw is None:
+        return []
+    if isinstance(raw, int):
+        return [raw] if raw > 0 else []
+    if isinstance(raw, list):
+        out: list[int] = []
+        for item in raw:
+            try:
+                n = int(item)
+            except (TypeError, ValueError):
+                continue
+            if n > 0:
+                out.append(n)
+        return out
+
+    text = str(raw).strip()
+    if not text:
+        return []
+    nums: list[int] = []
+    cur = ""
+    for ch in text:
+        if ch.isdigit():
+            cur += ch
+        elif cur:
+            nums.append(int(cur))
+            cur = ""
+    if cur:
+        nums.append(int(cur))
+    return [n for n in nums if n > 0]
+
+
+def _parse_iso(value: object) -> datetime:
+    raw = str(value or "").strip()
+    if not raw:
+        return datetime.fromtimestamp(0, tz=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except ValueError:
+        return datetime.fromtimestamp(0, tz=timezone.utc)
+
+
+def _in_date_range(ts: datetime, range_key: str) -> bool:
+    if range_key == "all":
+        return True
+    day_map = {"7d": 7, "30d": 30, "90d": 90}
+    days = day_map.get(range_key, 30)
+    cutoff = datetime.now(timezone.utc).timestamp() - (days * 86400)
+    return ts.timestamp() >= cutoff
+
+
+def _build_enriched_attempts(
+        user_id: str,
+        subject_id: str,
+        range_key: str = "30d",
+        question_type: str | None = None,
+        difficulty: str | None = None,
+        topic_type: str | None = None,
+        file_id: str | None = None,
+) -> list[dict]:
+    attempts = list_attempts(user_id=user_id, subject_id=subject_id)
+    questions = query_docs(
+        COLL.past_quiz,
+        filters=(("user_id", "==", user_id), ("subject_id", "==", subject_id)),
+    )
+    files = query_docs(
+        COLL.raw_files,
+        filters=(("user_id", "==", user_id), ("subject_id", "==", subject_id)),
+    )
+
+    question_by_id = {
+        str(q.get("question_id") or q.get("id") or ""): q for q in questions
+    }
+    file_name_by_id = {
+        str(f.get("file_id", "")): str(f.get("filename") or f.get("file_id") or "Unknown")
+        for f in files
+    }
+
+    enriched: list[dict] = []
+    for a in attempts:
+        qid = str(a.get("question_id", ""))
+        q = question_by_id.get(qid, {})
+        ts = _parse_iso(a.get("attempted_at"))
+        if not _in_date_range(ts, range_key):
+            continue
+
+        q_type = str(q.get("format_type") or a.get("question_type") or "MCQ")
+        q_diff = str(q.get("difficulty") or "")
+        q_topic = str(q.get("topic_type") or "")
+        a_file_id = str(a.get("file_id") or q.get("file_id") or "")
+        q_meta = q.get("metadata", {}) if isinstance(q.get("metadata", {}), dict) else {}
+        q_slides = _parse_slide_refs(q_meta.get("SLIDE"))
+
+        if question_type and question_type != "all" and q_type != question_type:
+            continue
+        if difficulty and difficulty != "all" and q_diff != difficulty:
+            continue
+        if topic_type and topic_type != "all" and q_topic != topic_type:
+            continue
+        if file_id and file_id != "all" and a_file_id != file_id:
+            continue
+
+        score_percent = _score_to_percent(a.get("score", 0))
+        correct = bool(a.get("correct", score_percent >= 70))
+        enriched.append(
+            {
+                "attempt_id": str(a.get("attempt_id") or a.get("id") or ""),
+                "question_id": qid,
+                "attempted_at": ts,
+                "score_percent": score_percent,
+                "correct": correct,
+                "user_answer": str(a.get("user_answer") or ""),
+                "file_id": a_file_id,
+                "file_name": file_name_by_id.get(a_file_id, "Unknown"),
+                "question_text": str(q.get("question_text") or a.get("question_text") or ""),
+                "question_type": q_type,
+                "difficulty": q_diff,
+                "topic_type": q_topic,
+                "slides": q_slides,
+            }
+        )
+    return enriched
+
+
+@router.get("/subjects")
+def get_subjects(
+        user_id: str = Query(default="default_user"),
+):
+    rows = list_subjects(user_id=user_id)
+    sessions = []
+    for row in rows:
+        # Keep response shape aligned with legacy frontend `subjects` docs.
+        session = dict(row)
+        session.pop("userId", None)
+        session.pop("user_id", None)
+        session.pop("_doc_id", None)
+        sessions.append(session)
+    return sorted(sessions, key=lambda s: s.get("date", ""), reverse=True)
+
+
+@router.put("/subjects/{subject_id}", response_model=SubjectSession)
+def put_subject(
+        subject_id: str,
+        payload: SubjectSession,
+        user_id: str = Query(default="default_user"),
+):
+    # Ensure path and body ids stay consistent.
+    if payload.id != subject_id:
+        raise HTTPException(status_code=400, detail="subject_id does not match payload.id")
+
+    try:
+        upsert_subject(user_id=user_id, session=payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return payload
+
+
+@router.delete("/subjects/{subject_id}", status_code=204)
+def remove_subject(
+        subject_id: str,
+        user_id: str = Query(default="default_user"),
+):
+    delete_subject(user_id=user_id, session_id=subject_id)
 
 
 @router.post("/files", response_model=FileUploadResponse)
@@ -425,16 +590,16 @@ def get_failed_questions(payload: FailedQuestionsRequest):
             user_id=payload.user_id,
             subject_id=payload.subject_id,
         )
-        failed = [a for a in attempts if not a.get("correct", False)]
+        # Keep latest attempt per question, then include only currently-wrong questions.
+        latest_by_question = {}
+        for a in sorted(attempts, key=lambda x: x.get("attempted_at", ""), reverse=True):
+            qid = a.get("question_id")
+            if not qid:
+                continue
+            if qid not in latest_by_question:
+                latest_by_question[qid] = a
 
-        # Deduplicate by question_id, keep most recent
-        seen = {}
-        for a in sorted(failed, key=lambda x: x.get("attempted_at", ""), reverse=True):
-            qid = a["question_id"]
-            if qid not in seen:
-                seen[qid] = a
-
-        failed_unique = list(seen.values())
+        failed_unique = [a for a in latest_by_question.values() if not a.get("correct", False)]
 
         # Fetch actual questions
         questions = []
@@ -564,6 +729,322 @@ def get_attempts(
         )
         for r in rows
     ]
+
+
+@router.get("/analytics/dashboard")
+def get_analytics_dashboard(
+        user_id: str = Query(default="default_user"),
+        subject_id: str = Query(default="default_subject"),
+        range_key: str = Query(default="30d", alias="range"),
+        rolling_window: int = Query(default=10, ge=3, le=50),
+        question_type: str | None = Query(default=None),
+        difficulty: str | None = Query(default=None),
+        topic_type: str | None = Query(default=None),
+        file_id: str | None = Query(default=None),
+        min_attempts: int = Query(default=3, ge=1, le=20),
+        limit: int = Query(default=10, ge=3, le=50),
+):
+    enriched = _build_enriched_attempts(
+        user_id=user_id,
+        subject_id=subject_id,
+        range_key=range_key,
+        question_type=question_type,
+        difficulty=difficulty,
+        topic_type=topic_type,
+        file_id=file_id,
+    )
+
+    enriched.sort(key=lambda x: x["attempted_at"])
+    total = len(enriched)
+    if total:
+        avg_score = sum(x["score_percent"] for x in enriched) / total
+        accuracy = (sum(1 for x in enriched if x["correct"]) / total) * 100.0
+    else:
+        avg_score = 0.0
+        accuracy = 0.0
+
+    rolling_points = []
+    rolling_scores: list[float] = []
+    for idx, item in enumerate(enriched):
+        rolling_slice = enriched[max(0, idx - rolling_window + 1): idx + 1]
+        rolling_avg = sum(x["score_percent"] for x in rolling_slice) / len(rolling_slice)
+        rolling_scores.append(rolling_avg)
+        rolling_points.append(
+            {
+                "attempted_at": item["attempted_at"].isoformat(),
+                "score_percent": round(item["score_percent"], 2),
+                "rolling_avg": round(rolling_avg, 2),
+            }
+        )
+
+    if total:
+        current_slice = enriched[max(0, total - rolling_window):]
+        prev_end = max(0, total - rolling_window)
+        prev_start = max(0, prev_end - rolling_window)
+        prev_slice = enriched[prev_start:prev_end]
+        current_rolling = sum(x["score_percent"] for x in current_slice) / len(current_slice)
+        prev_rolling = (
+            sum(x["score_percent"] for x in prev_slice) / len(prev_slice)
+            if prev_slice else current_rolling
+        )
+    else:
+        current_rolling = 0.0
+        prev_rolling = 0.0
+
+    improvement_pp = current_rolling - prev_rolling
+    all_attempts_subject = sorted(
+        list_attempts(user_id=user_id, subject_id=subject_id),
+        key=lambda x: _parse_iso(x.get("attempted_at")),
+    )
+    best_streak = 0
+    cur_streak = 0
+    for a in all_attempts_subject:
+        score_percent = _score_to_percent(a.get("score", 0))
+        is_correct = bool(a.get("correct", score_percent >= 70))
+        if is_correct:
+            cur_streak += 1
+            if cur_streak > best_streak:
+                best_streak = cur_streak
+        else:
+            cur_streak = 0
+
+    def build_bucket(items: list[dict], key_name: str, label_name: str):
+        grouped = defaultdict(lambda: {"attempts": 0, "wrong": 0})
+        for it in items:
+            k = str(it.get(key_name) or "Unknown")
+            grouped[k]["attempts"] += 1
+            grouped[k]["wrong"] += 0 if it["correct"] else 1
+        rows = []
+        for k, v in grouped.items():
+            attempts_n = v["attempts"]
+            wrong_n = v["wrong"]
+            accuracy_n = ((attempts_n - wrong_n) / attempts_n) * 100.0 if attempts_n else 0.0
+            if attempts_n < min_attempts:
+                continue
+            rows.append(
+                {
+                    "type": label_name,
+                    "key": k,
+                    "attempts": attempts_n,
+                    "wrong_count": wrong_n,
+                    "accuracy": round(accuracy_n, 2),
+                }
+            )
+        return rows
+
+    bucket_rows = []
+    bucket_rows.extend(build_bucket(enriched, "topic_type", "topic"))
+    bucket_rows.extend(build_bucket(enriched, "question_type", "question_type"))
+    bucket_rows.extend(build_bucket(enriched, "file_name", "file"))
+    weak_items = sorted(bucket_rows, key=lambda x: (x["accuracy"], -x["wrong_count"]))[:limit]
+    strong_items = sorted(bucket_rows, key=lambda x: (-x["accuracy"], -x["attempts"]))[:limit]
+
+    q_grouped = defaultdict(lambda: {
+        "question_text": "",
+        "question_type": "",
+        "difficulty": "",
+        "topic_type": "",
+        "file_name": "",
+        "attempts": 0,
+        "wrong": 0,
+        "last_attempted_at": datetime.fromtimestamp(0, tz=timezone.utc),
+        "latest_user_answer": "",
+        "latest_correct": False,
+        "latest_score_percent": 0.0,
+    })
+    for it in enriched:
+        qid = it["question_id"] or "unknown"
+        q_grouped[qid]["question_text"] = it["question_text"]
+        q_grouped[qid]["question_type"] = it["question_type"]
+        q_grouped[qid]["difficulty"] = it["difficulty"]
+        q_grouped[qid]["topic_type"] = it["topic_type"]
+        q_grouped[qid]["file_name"] = it["file_name"]
+        q_grouped[qid]["attempts"] += 1
+        q_grouped[qid]["wrong"] += 0 if it["correct"] else 1
+        if it["attempted_at"] > q_grouped[qid]["last_attempted_at"]:
+            q_grouped[qid]["last_attempted_at"] = it["attempted_at"]
+            q_grouped[qid]["latest_user_answer"] = str(it.get("user_answer") or "")
+            q_grouped[qid]["latest_correct"] = bool(it["correct"])
+            q_grouped[qid]["latest_score_percent"] = float(it["score_percent"])
+
+    most_missed = []
+    for qid, v in q_grouped.items():
+        attempts_n = int(v["attempts"])
+        wrong_n = int(v["wrong"])
+        if wrong_n <= 0:
+            continue
+        accuracy_n = ((attempts_n - wrong_n) / attempts_n) * 100.0 if attempts_n else 0.0
+        most_missed.append(
+            {
+                "question_id": qid,
+                "question_text": v["question_text"],
+                "question_type": v["question_type"],
+                "difficulty": v["difficulty"],
+                "topic_type": v["topic_type"],
+                "file_name": v["file_name"],
+                "attempts": attempts_n,
+                "wrong_count": wrong_n,
+                "accuracy": round(accuracy_n, 2),
+                "last_attempted_at": v["last_attempted_at"].isoformat(),
+                "latest_user_answer": v["latest_user_answer"],
+                "latest_correct": v["latest_correct"],
+                "latest_score_percent": round(v["latest_score_percent"], 2),
+            }
+        )
+
+    most_missed.sort(key=lambda x: (-x["wrong_count"], x["accuracy"]))
+    most_missed = most_missed[:limit]
+
+    now_utc = datetime.now(timezone.utc)
+    review_candidates = []
+    for item in most_missed:
+        last_ts = _parse_iso(item.get("last_attempted_at"))
+        days_ago = max(0.0, (now_utc - last_ts).total_seconds() / 86400.0)
+        recency_bonus = 2.0 if days_ago <= 3 else 1.0 if days_ago <= 7 else 0.0
+        priority_score = (item["wrong_count"] * 2.0) + ((100.0 - item["accuracy"]) / 20.0) + recency_bonus
+
+        if item["wrong_count"] >= 2:
+            reason = "Repeated misses"
+        elif item["accuracy"] <= 60:
+            reason = "Low accuracy"
+        else:
+            reason = "Recent miss"
+
+        review_candidates.append({
+            **item,
+            "days_since_last_attempt": round(days_ago, 1),
+            "reason": reason,
+            "_priority_score": round(priority_score, 2),
+        })
+
+    review_queue = sorted(
+        review_candidates,
+        key=lambda x: (-x["_priority_score"], -x["wrong_count"], x["accuracy"]),
+    )[:limit]
+    for r in review_queue:
+        r.pop("_priority_score", None)
+
+    coverage_by_file: dict[str, dict] = {}
+    for it in enriched:
+        a_file_id = str(it.get("file_id") or "")
+        if not a_file_id:
+            continue
+        slides = it.get("slides") or []
+        if not slides:
+            continue
+        entry = coverage_by_file.setdefault(
+            a_file_id,
+            {
+                "file_id": a_file_id,
+                "file_name": it.get("file_name") or "Unknown",
+                "slide_counts": defaultdict(int),
+                "total_uses": 0,
+            },
+        )
+        for s in slides:
+            try:
+                slide_n = int(s)
+            except (TypeError, ValueError):
+                continue
+            if slide_n <= 0:
+                continue
+            entry["slide_counts"][slide_n] += 1
+            entry["total_uses"] += 1
+
+    coverage_files = []
+    for _, entry in sorted(coverage_by_file.items(), key=lambda kv: str(kv[1].get("file_name", ""))):
+        total_uses = int(entry["total_uses"]) or 1
+        slides = []
+        for slide_n in sorted(entry["slide_counts"].keys()):
+            uses = int(entry["slide_counts"][slide_n])
+            slides.append(
+                {
+                    "slide": slide_n,
+                    "uses": uses,
+                    "coverage_percent": round((uses / total_uses) * 100.0, 2),
+                }
+            )
+        coverage_files.append(
+            {
+                "file_id": entry["file_id"],
+                "file_name": entry["file_name"],
+                "total_uses": int(entry["total_uses"]),
+                "slides": slides,
+            }
+        )
+
+    return {
+        "overview": {
+            "total_attempts": total,
+            "overall_avg_score": round(avg_score, 2),
+            "current_rolling_avg": round(current_rolling, 2),
+            "previous_rolling_avg": round(prev_rolling, 2),
+            "improvement_pp": round(improvement_pp, 2),
+            "accuracy_percent": round(accuracy, 2),
+            "rolling_window": rolling_window,
+            "best_streak": int(best_streak),
+        },
+        "rolling_trend": rolling_points,
+        "citation_coverage": {"files": coverage_files},
+        "weak_strong": {
+            "weak_items": weak_items,
+            "strong_items": strong_items,
+        },
+        "most_missed_questions": most_missed,
+        "review_queue": review_queue,
+    }
+
+
+@router.get("/analytics/history")
+def get_analytics_history(
+        user_id: str = Query(default="default_user"),
+        subject_id: str = Query(default="default_subject"),
+        range_key: str = Query(default="30d", alias="range"),
+        question_type: str | None = Query(default=None),
+        difficulty: str | None = Query(default=None),
+        topic_type: str | None = Query(default=None),
+        file_id: str | None = Query(default=None),
+        offset: int = Query(default=0, ge=0),
+        limit: int = Query(default=10, ge=1, le=100),
+):
+    enriched = _build_enriched_attempts(
+        user_id=user_id,
+        subject_id=subject_id,
+        range_key=range_key,
+        question_type=question_type,
+        difficulty=difficulty,
+        topic_type=topic_type,
+        file_id=file_id,
+    )
+
+    enriched.sort(key=lambda x: x["attempted_at"], reverse=True)
+    total = len(enriched)
+    page = enriched[offset: offset + limit]
+
+    items = [
+        {
+            "attempt_id": x["attempt_id"],
+            "question_id": x["question_id"],
+            "attempted_at": x["attempted_at"].isoformat(),
+            "question_text": x["question_text"],
+            "question_type": x["question_type"],
+            "difficulty": x["difficulty"],
+            "topic_type": x["topic_type"],
+            "file_name": x["file_name"],
+            "score_percent": round(float(x["score_percent"]), 2),
+            "correct": bool(x["correct"]),
+            "user_answer": x["user_answer"],
+        }
+        for x in page
+    ]
+
+    return {
+        "items": items,
+        "offset": offset,
+        "limit": limit,
+        "total": total,
+        "has_more": (offset + len(items)) < total,
+    }
 
 
 @router.get("/analytics", response_model=AnalyticsSummary)

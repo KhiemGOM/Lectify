@@ -10,59 +10,48 @@ function safeJson(res) {
   return res.json();
 }
 
-function toFileModel(file) {
-  return {
-    id: file.file_id,
-    name: file.filename,
-  };
-}
-
-function toQuizModel(question) {
-  const title = (question.question_text || '').slice(0, 80) || 'Quiz Question';
-  return {
-    id: question.question_id,
-    title,
-    sourceFileId: question.file_id || '',
-  };
-}
-
-function toAttemptModel(attempt) {
-  return {
-    id: attempt.attempt_id,
-    quizId: attempt.question_id,
-    sourceFileId: attempt.file_id || '',
-    scorePercent: Number(attempt.score || 0) * 10,
-    timeTakenSeconds: 0,
-    attemptedAt: attempt.attempted_at,
-  };
-}
-
-export function useUserAnalytics(userId = 'default_user', subjectId = 'default_subject') {
+export function useUserAnalytics(
+  userId = 'default_user',
+  subjectId = 'default_subject',
+  filters = {},
+) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    const qs = `?user_id=${encodeURIComponent(userId)}&subject_id=${encodeURIComponent(subjectId)}`;
+    const params = new URLSearchParams({
+      user_id: userId,
+      subject_id: subjectId,
+      range: filters.range ?? '30d',
+      rolling_window: String(filters.rollingWindow ?? 10),
+      min_attempts: String(filters.minAttempts ?? 3),
+      limit: String(filters.limit ?? 10),
+    });
+
+    if (filters.questionType && filters.questionType !== 'all') {
+      params.set('question_type', filters.questionType);
+    }
+    if (filters.difficulty && filters.difficulty !== 'all') {
+      params.set('difficulty', filters.difficulty);
+    }
+    if (filters.topicType && filters.topicType !== 'all') {
+      params.set('topic_type', filters.topicType);
+    }
+    if (filters.fileId && filters.fileId !== 'all') {
+      params.set('file_id', filters.fileId);
+    }
 
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const [filesRes, questionsRes, attemptsRes] = await Promise.all([
-          fetch(`${API_BASE}/files${qs}`).then(safeJson),
-          fetch(`${API_BASE}/questions${qs}`).then(safeJson),
-          fetch(`${API_BASE}/attempts${qs}`).then(safeJson),
-        ]);
+        const dashboard = await fetch(`${API_BASE}/analytics/dashboard?${params.toString()}`)
+          .then(safeJson);
 
         if (cancelled) return;
-        setData({
-          userId,
-          files: Array.isArray(filesRes) ? filesRes.map(toFileModel) : [],
-          quizzes: Array.isArray(questionsRes) ? questionsRes.map(toQuizModel) : [],
-          attempts: Array.isArray(attemptsRes) ? attemptsRes.map(toAttemptModel) : [],
-        });
+        setData(dashboard);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Failed to load analytics');
@@ -75,7 +64,18 @@ export function useUserAnalytics(userId = 'default_user', subjectId = 'default_s
     return () => {
       cancelled = true;
     };
-  }, [userId, subjectId]);
+  }, [
+    userId,
+    subjectId,
+    filters.range,
+    filters.rollingWindow,
+    filters.minAttempts,
+    filters.limit,
+    filters.questionType,
+    filters.difficulty,
+    filters.topicType,
+    filters.fileId,
+  ]);
 
   return { data, loading, error };
 }

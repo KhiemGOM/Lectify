@@ -1,6 +1,14 @@
 import React, { useState } from 'react'
 
-function SideBar({ setCurrentSessionId, handleNewSession, uploadSessions, currentSessionId, onDeleteSubject }) {
+function SideBar({
+    setCurrentSessionId,
+    handleNewSession,
+    handleGoHome,
+    uploadSessions,
+    currentSessionId,
+    onDeleteSubject,
+    loadingSessions = false,
+}) {
     const [confirmingDelete, setConfirmingDelete] = useState(null);
 
     const handleDeleteClick = (e, sessionId) => {
@@ -21,14 +29,18 @@ function SideBar({ setCurrentSessionId, handleNewSession, uploadSessions, curren
 
     return (
         <aside className="sidebar">
-            <div className="logo">
-                <h1>MD<span>Quiz</span></h1>
-            </div>
+            <button className="logo" onClick={handleGoHome} type="button">
+                <h1>Lect<span>ify</span></h1>
+            </button>
 
             <div className="sessions-section">
                 <h3>Upload Subjects</h3>
                 <div className="sessions-list">
-                    {uploadSessions.length > 0 ? (
+                    {loadingSessions ? (
+                        <div className="empty-state">
+                            <p>Loading subjects...</p>
+                        </div>
+                    ) : uploadSessions.length > 0 ? (
                         uploadSessions.map(session => {
                             const isActive = currentSessionId === session.id;
                             return (

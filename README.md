@@ -28,15 +28,33 @@ Backend URLs:
 
 ## Run frontend + backend together
 
-Open two terminals:
+Install backend Python deps first, then run:
 
-1. Terminal A (frontend)
 ```powershell
-npm run dev
+npm run dev:full
 ```
 
-2. Terminal B (backend)
-```powershell
-.\.venv\Scripts\Activate.ps1
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+This starts:
+- frontend: `npm run dev:frontend` (`http://localhost:5173`)
+- backend: `npm run dev:backend` (`http://127.0.0.1:8000`)
+
+## API base URL (frontend -> backend)
+
+Frontend reads backend URL from `VITE_API_BASE`.
+
+Create `.env` in project root:
+
+```env
+VITE_API_BASE=http://127.0.0.1:8000
 ```
+
+If `VITE_API_BASE` is not set, frontend defaults to `http://127.0.0.1:8000`.
+
+## Separate deploy
+
+Use separate deploy targets for frontend and backend.
+
+- Frontend (Vercel): `npm run deploy:frontend`
+- Backend (separate platform): `npm run deploy:backend`
+
+Recommended backend hosts: Render, Railway, Fly.io, or Cloud Run.

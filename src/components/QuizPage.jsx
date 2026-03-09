@@ -46,10 +46,26 @@ const getQ = (questions, current) => {
 
 async function openSlideViewer(question, userId = 'default_user', subjectId = 'default_subject') {
     const {fileId, slideNums, slideText, reference} = question;
+    const normalizedSlideText = typeof slideText === 'string' && slideText.trim() ? slideText : null;
+    const hasFileId = Boolean(fileId && String(fileId).trim());
+
+    if (!hasFileId && !normalizedSlideText) {
+        alert('Citation is unavailable for this question.');
+        return;
+    }
 
     // If the original file is available, embed it in an iframe
-    if (fileId) {
-        const fileUrl = await downloadFile(fileId, userId, subjectId);
+    if (hasFileId) {
+        let fileUrl = null;
+        try {
+            fileUrl = await downloadFile(fileId, userId, subjectId);
+        } catch (_) {
+            if (!normalizedSlideText) {
+                alert('Could not open the source file for this citation.');
+                return;
+            }
+        }
+        if (fileUrl) {
         const targetPage = slideNums?.length > 0
             ? Math.min(...slideNums.map(Number).filter(n => !isNaN(n)))
             : 1;
@@ -93,20 +109,29 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
 </body>
 </html>`;
 
+        const popupWidth = window.screen?.availWidth || 1280;
+        const popupHeight = window.screen?.availHeight || 860;
         const win = window.open(
             '',
             '_blank',
-            'width=960,height=780,left=80,top=60,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes',
+            `width=${popupWidth},height=${popupHeight},left=0,top=0,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`,
         );
         if (win) {
             win.document.write(html);
             win.document.close();
+            try {
+                win.moveTo(0, 0);
+                win.resizeTo(popupWidth, popupHeight);
+            } catch (_) {
+                // Browser may block move/resize calls.
+            }
         }
         return;
+        }
     }
 
     // Fallback: render extracted text when no file is stored on disk
-    if (!slideText) return;
+    if (!normalizedSlideText) return;
 
     const targetSlide = slideNums?.length > 0
         ? Math.min(...slideNums.map(Number).filter(n => !isNaN(n)))
@@ -116,7 +141,7 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
     const sections = [];
     const regex = /^Slide (\d+):\n([\s\S]*?)(?=^Slide \d+:|$(?![\s\S]))/gm;
     let match;
-    const paddedText = slideText + '\nSlide 999999:\n';
+    const paddedText = normalizedSlideText + '\nSlide 999999:\n';
     while ((match = regex.exec(paddedText)) !== null) {
         const num = parseInt(match[1], 10);
         if (num !== 999999) sections.push({num, content: match[2].trim()});
@@ -130,7 +155,7 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
           <p>${esc(sec.content)}</p>
         </section>`;
         }).join('\n')
-        : `<section><pre>${esc(slideText)}</pre></section>`;
+        : `<section><pre>${esc(normalizedSlideText)}</pre></section>`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -159,14 +184,22 @@ async function openSlideViewer(question, userId = 'default_user', subjectId = 'd
 </body>
 </html>`;
 
+    const popupWidth = window.screen?.availWidth || 1280;
+    const popupHeight = window.screen?.availHeight || 860;
     const win = window.open(
         '',
         '_blank',
-        'width=860,height=700,left=100,top=80,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes',
+        `width=${popupWidth},height=${popupHeight},left=0,top=0,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`,
     );
     if (win) {
         win.document.write(html);
         win.document.close();
+        try {
+            win.moveTo(0, 0);
+            win.resizeTo(popupWidth, popupHeight);
+        } catch (_) {
+            // Browser may block move/resize calls.
+        }
     }
 }
 
@@ -206,15 +239,19 @@ export default function QuizPage({
                                      questions,
                                      onExit,
                                      userId = 'default_user',
-                                     subjectId = 'default_subject'
+                                     subjectId = 'default_subject',
+                                     reviewMode = false,
+                                     initialAnswers = {},
+                                     initialResults = null,
                                  }) {
     const [current, setCurrent] = useState(0);
-    const [userAnswers, setUserAnswers] = useState({});
-    const [submitted, setSubmitted] = useState(false);
-    const [quizResults, setQuizResults] = useState(null);
+    const [userAnswers, setUserAnswers] = useState(initialAnswers);
+    const [submitted, setSubmitted] = useState(Boolean(initialResults));
+    const [quizResults, setQuizResults] = useState(initialResults);
     const [showResults, setShowResults] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
     const [secondsLeft, setSecondsLeft] = useState(
         settings.timeLimitOn ? settings.timeLimitMins * 60 : null
     );
@@ -232,6 +269,7 @@ export default function QuizPage({
 
     /* ── Save results to localStorage ── */
     const saveResults = () => {
+        if (reviewMode) return;
         console.log('[QuizPage] saveResults called — submitted:', submittedRef.current, 'hasResults:', !!quizResultsRef.current);
         if (!submittedRef.current || !quizResultsRef.current) return;
         try {
@@ -254,11 +292,29 @@ export default function QuizPage({
         onExit();
     };
 
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch (_) {
+            // Fullscreen may be blocked without direct user gesture.
+        }
+    };
+
     const q = getQ(questions, current);
     const total = questions.length;
     const answered = Object.keys(userAnswers).length;
     const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
     const isLast = current === total - 1;
+
+    useEffect(() => {
+        const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+        document.addEventListener('fullscreenchange', onFsChange);
+        return () => document.removeEventListener('fullscreenchange', onFsChange);
+    }, []);
 
     /* ── Timer countdown ── */
     useEffect(() => {
@@ -386,7 +442,7 @@ export default function QuizPage({
         const results = await gradeWithBackend();
         setSubmitted(true);
         setQuizResults(results);
-        setShowResults(true);
+        setShowResults(!reviewMode);
         setSubmitting(false);
     };
 
@@ -607,6 +663,9 @@ export default function QuizPage({
                     <span className="qp-meta-tag">
                         {total} q · {settings.difficulty}{isRetrying || q.isRevisit ? ' · Revisit' : ''}
                     </span>
+                    <button className="qp-back-btn" onClick={() => void toggleFullscreen()}>
+                        {isFullscreen ? '🗗 Exit Fullscreen' : '⤢ Fullscreen'}
+                    </button>
                     <button className="qp-back-btn" onClick={handleExit}>← Back</button>
                 </div>
             </header>
@@ -657,14 +716,20 @@ export default function QuizPage({
                         {submitted && q.reference && (
                             <button
                                 className="qp-reference"
-                                onClick={() => openSlideViewer(q, userId, subjectId)}
-                                title="View source slides"
+                                onClick={async () => {
+                                    try {
+                                        await openSlideViewer(q, userId, subjectId);
+                                    } catch (err) {
+                                        console.error("Failed to open citation:", err);
+                                        alert("Could not open citation.");
+                                    }
+                                }}
                             >
                                 ↗ {q.reference}
                             </button>
                         )}
 
-                        {submitted && quizResults?.results?.[q.id] && (
+                        {submitted && !reviewMode && quizResults?.results?.[q.id] && (
                             <div className="qp-question-score">
                     <span className={`qp-score-chip ${quizResults.results[q.id].correct ? 'good' : 'bad'}`}>
                       {quizResults.results[q.id].correct ? '✓' : '✘'} {Math.round(quizResults.results[q.id].score * 10) / 10} pts
@@ -706,13 +771,15 @@ export default function QuizPage({
             {/* ── Footer ── */}
             <footer className="qp-footer">
                 <div className="qp-footer-btns">
-                    <button
-                        className="qp-btn qp-btn-ghost"
-                        disabled={current === 0}
-                        onClick={() => navigate(-1)}
-                    >
-                        ← Prev
-                    </button>
+                    {total > 1 && (
+                        <button
+                            className="qp-btn qp-btn-ghost"
+                            disabled={current === 0}
+                            onClick={() => navigate(-1)}
+                        >
+                            ← Prev
+                        </button>
+                    )}
                     {!isLast && (
                         <button className="qp-btn qp-btn-primary" onClick={() => navigate(1)}>
                             Next →
@@ -724,7 +791,7 @@ export default function QuizPage({
                             {submitting ? 'Submitting...' : 'Submit ✓'}
                         </button>
                     )}
-                    {submitted && (
+                    {submitted && !reviewMode && (
                         <>
                             <button className="qp-btn qp-btn-primary" onClick={() => setShowResults(true)}>
                                 View Results
@@ -734,14 +801,30 @@ export default function QuizPage({
                             </button>
                         </>
                     )}
+                    {reviewMode && (
+                        <>
+                            {submitted && (
+                                <button className="qp-btn qp-btn-primary" onClick={handleRetry}>
+                                    ↩ Retry
+                                </button>
+                            )}
+                            <button className="qp-btn qp-btn-ghost" onClick={handleExit}>
+                                ← Back
+                            </button>
+                        </>
+                    )}
                 </div>
                 <span className="qp-footer-hint">
-          {submitted ? 'Quiz submitted — review your answers above' : (HINTS[q.type] || '')}
+          {reviewMode
+              ? 'Review latest attempt'
+              : submitted
+                  ? 'Quiz submitted — review your answers above'
+                  : (HINTS[q.type] || '')}
         </span>
             </footer>
 
             {/* ── Results overlay ── */}
-            {showResults && quizResults && (
+            {!reviewMode && showResults && quizResults && (
                 <div className="qp-results-overlay">
                     <div className="qp-results-card">
                         <div className="qp-results-score">{quizResults.score_pct}%</div>

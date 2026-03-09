@@ -1,6 +1,47 @@
 /* ── api.js — REST API client for the FastAPI backend ── */
 
-export const API_BASE = 'http://127.0.0.1:8000';
+const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+export const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
+
+export async function loadSubjects(userId = 'default_user') {
+    const url = `${API_BASE}/subjects?user_id=${encodeURIComponent(userId)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Load subjects failed (${res.status}): ${detail}`);
+    }
+    return res.json();
+}
+
+export async function saveSubject(userId = 'default_user', session) {
+    const sessionId = session?.id;
+    if (!sessionId) {
+        throw new Error('saveSubject requires session.id');
+    }
+
+    const url = `${API_BASE}/subjects/${encodeURIComponent(sessionId)}`
+        + `?user_id=${encodeURIComponent(userId)}`;
+    const res = await fetch(url, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(session),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Save subject failed (${res.status}): ${detail}`);
+    }
+    return res.json();
+}
+
+export async function deleteSubject(userId = 'default_user', subjectId) {
+    const url = `${API_BASE}/subjects/${encodeURIComponent(subjectId)}`
+        + `?user_id=${encodeURIComponent(userId)}`;
+    const res = await fetch(url, {method: 'DELETE'});
+    if (!res.ok && res.status !== 404) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Delete subject failed (${res.status}): ${detail}`);
+    }
+}
 
 /**
  * Upload a file to the backend.
@@ -145,6 +186,51 @@ export async function fetchFailedQuestions(userId, subjectId, filters = {}) {
     return res.json();
 }
 
+export async function fetchQuestionDetail(questionId) {
+    const res = await fetch(`${API_BASE}/questions/${encodeURIComponent(questionId)}`);
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Fetch question detail failed (${res.status}): ${detail}`);
+    }
+    return res.json();
+}
+
+export async function fetchAnalyticsHistory(
+    userId = 'default_user',
+    subjectId = 'default_subject',
+    filters = {},
+    offset = 0,
+    limit = 10,
+) {
+    const params = new URLSearchParams({
+        user_id: userId,
+        subject_id: subjectId,
+        range: filters.range ?? '30d',
+        offset: String(offset),
+        limit: String(limit),
+    });
+
+    if (filters.questionType && filters.questionType !== 'all') {
+        params.set('question_type', filters.questionType);
+    }
+    if (filters.difficulty && filters.difficulty !== 'all') {
+        params.set('difficulty', filters.difficulty);
+    }
+    if (filters.topicType && filters.topicType !== 'all') {
+        params.set('topic_type', filters.topicType);
+    }
+    if (filters.fileId && filters.fileId !== 'all') {
+        params.set('file_id', filters.fileId);
+    }
+
+    const res = await fetch(`${API_BASE}/analytics/history?${params.toString()}`);
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Fetch analytics history failed (${res.status}): ${detail}`);
+    }
+    return res.json();
+}
+
 /**
  * Convert an API quiz response into the QuizPage question format.
  *
@@ -181,21 +267,22 @@ export function mapApiQuestion(apiRes, settingsType, filename = null, chunk = nu
     let reference;
     let slideNums = null;
 
-    if (filename) {
+    const refName = filename || (fileId ? 'Reference' : null);
+    if (refName) {
         const slideRef = metadata?.SLIDE;
         if (slideRef != null && slideRef !== '') {
             const slides = Array.isArray(slideRef) ? slideRef : [slideRef];
             slideNums = slides.map(Number).filter(n => !isNaN(n));
             const label = slides.length > 1 ? 'Slides' : 'Slide';
-            reference = `${filename} — ${label} ${slides.join(', ')}`;
+            reference = `${refName} — ${label} ${slides.join(', ')}`;
         } else if (chunk?.chunk_begin != null && chunk?.chunk_end != null) {
             slideNums = Array.from(
                 {length: chunk.chunk_end - chunk.chunk_begin + 1},
                 (_, i) => chunk.chunk_begin + i,
             );
-            reference = `${filename} — Sections ${chunk.chunk_begin}–${chunk.chunk_end}`;
+            reference = `${refName} — Sections ${chunk.chunk_begin}–${chunk.chunk_end}`;
         } else {
-            reference = filename;
+            reference = refName;
         }
     }
 
@@ -212,3 +299,4 @@ export function mapApiQuestion(apiRes, settingsType, filename = null, chunk = nu
         ...(chunk?.raw_text && {slideText: chunk.raw_text}),
     };
 }
+

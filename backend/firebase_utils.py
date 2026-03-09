@@ -32,6 +32,7 @@ from typing import Any, Optional, Sequence, Tuple
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Load .env relative to this file (backend/.env)
 load_dotenv(Path(__file__).parent / ".env")
@@ -47,6 +48,7 @@ class Collections:
     past_quiz: str = "past_quiz"
     attempts: str = "attempts"
     user_subject_metadata: str = "user_subject_metadata"
+    subjects: str = "subjects"
 
 
 COLL = Collections()
@@ -164,7 +166,10 @@ def get_doc(collection: str, doc_id: str) -> Optional[dict[str, Any]]:
     if not snap.exists:
         return None
     data = snap.to_dict() or {}
-    data["id"] = snap.id
+    if "id" in data:
+        data["_doc_id"] = snap.id
+    else:
+        data["id"] = snap.id
     return data
 
 
@@ -191,14 +196,22 @@ def query_docs(
 ) -> list[dict[str, Any]]:
     q: Any = db().collection(collection)
     for field, op, value in filters:
-        q = q.where(field, op, value)
+        # Prefer keyword filter API to avoid firestore positional-arg warning.
+        try:
+            q = q.where(filter=FieldFilter(field, op, value))
+        except TypeError:
+            # Backward compatibility for older firestore clients.
+            q = q.where(field, op, value)
     if limit_n is not None:
         q = q.limit(limit_n)
 
     out: list[dict[str, Any]] = []
     for snap in q.stream():
         row = snap.to_dict() or {}
-        row["id"] = snap.id
+        if "id" in row:
+            row["_doc_id"] = snap.id
+        else:
+            row["id"] = snap.id
         out.append(row)
     return out
 
@@ -521,3 +534,57 @@ def get_next_file_index(
         ],
     )
     return len(existing_files) + 1
+
+
+# -------------------------
+# 6) subjects (collection)
+# -------------------------
+
+def upsert_subject(
+        *,
+        user_id: str,
+        session: dict[str, Any],
+) -> str:
+    """
+    Upsert a subject/session document.
+
+    Uses deterministic doc id: "{user_id}::{session_id}" to mirror previous
+    frontend behavior and make lookups/deletes predictable.
+    """
+    session_id = str(session.get("id", "")).strip()
+    if not session_id:
+        raise ValueError("session.id is required")
+
+    payload = {
+        "userId": user_id,   # legacy/frontend-compatible field
+        "user_id": user_id,  # backend-style field for consistency
+        **session,
+    }
+    return upsert_doc(COLL.subjects, _doc_id(user_id, session_id), payload)
+
+
+def list_subjects(*, user_id: str, limit_n: int = 1000) -> list[dict[str, Any]]:
+    """
+    List all subjects for a user.
+
+    Primarily filters by `userId` for compatibility with existing data that was
+    created from the frontend Firebase SDK.
+    """
+    rows = query_docs(
+        COLL.subjects,
+        filters=(("userId", "==", user_id),),
+        limit_n=limit_n,
+    )
+
+    # Fallback for any rows written in backend snake_case form only.
+    if not rows:
+        rows = query_docs(
+            COLL.subjects,
+            filters=(("user_id", "==", user_id),),
+            limit_n=limit_n,
+        )
+    return rows
+
+
+def delete_subject(*, user_id: str, session_id: str) -> None:
+    delete_doc(COLL.subjects, _doc_id(user_id, session_id))

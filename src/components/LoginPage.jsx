@@ -12,15 +12,21 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const LoginPage = () => {
+const LoginPage = ({ isAuthenticated = false, onEnterStudio }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState('quiz');
 
   const handleGoogleSignIn = async () => {
+    if (isAuthenticated) {
+      onEnterStudio?.();
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
+      window.location.assign('/studio');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setError('Sign-in failed. Please try again.');
@@ -32,86 +38,142 @@ const LoginPage = () => {
 
   return (
     <div className="home-root">
-
-      {/* Nav */}
       <nav className="home-nav">
         <div className="home-nav-logo">
-          <span className="home-nav-logo-icon">&#128214;</span>
-          <span className="home-nav-logo-text">MDQuiz</span>
+          <span className="home-nav-logo-icon">L</span>
+          <span className="home-nav-logo-text">Lectify</span>
         </div>
-        <button
-          className="home-nav-signin"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-        >
-          {loading ? <span className="login-spinner" /> : <GoogleIcon />}
-          {loading ? 'Signing in...' : 'Sign in'}
+        <button className="home-nav-signin" onClick={handleGoogleSignIn} disabled={loading}>
+          {loading ? <span className="login-spinner" /> : (isAuthenticated ? null : <GoogleIcon />)}
+          {loading ? 'Signing in...' : (isAuthenticated ? 'Enter Studio' : 'Sign in')}
         </button>
       </nav>
 
-      {/* Hero */}
       <section className="home-hero">
-        {/* Animated background blobs */}
         <div className="home-blob home-blob--1" />
         <div className="home-blob home-blob--2" />
         <div className="home-blob home-blob--3" />
-        {/* Dot grid overlay */}
         <div className="home-hero-grid" />
 
-        <div className="home-hero-inner">
-          <div className="home-hero-badge hero-anim hero-anim--1">AI-powered study tool</div>
-          <h1 className="home-hero-title hero-anim hero-anim--2">
-            Turn your slides into<br />
-            <span className="home-hero-accent">adaptive quizzes</span>
-          </h1>
-          <p className="home-hero-sub hero-anim hero-anim--3">
-            Upload lecture notes or PDFs, generate MCQ, True/False, multi-select and short-answer
-            questions instantly, and track your progress over time.
-          </p>
-          <button
-            className="home-hero-cta hero-anim hero-anim--4"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            {loading ? <span className="login-spinner login-spinner--white" /> : <GoogleIcon />}
-            {loading ? 'Signing in...' : 'Get started with Google'}
-          </button>
-          {error && <p className="login-error">{error}</p>}
+        <div className="home-hero-layout">
+          <div className="home-hero-copy">
+            <div className="home-hero-badge hero-anim hero-anim--1">AI-powered study tool</div>
+            <h1 className="home-hero-title hero-anim hero-anim--2">
+              Turn class materials into
+              <br />
+              <span className="home-hero-accent">high-quality quizzes</span>
+            </h1>
+            <p className="home-hero-sub hero-anim hero-anim--3">
+              Lectify generates question sets from your notes in seconds, then helps you drill weak spots with analytics-backed review.
+            </p>
+            <button
+              className="home-hero-cta hero-anim hero-anim--4"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              {loading ? <span className="login-spinner login-spinner--white" /> : (isAuthenticated ? null : <GoogleIcon />)}
+              {loading ? 'Signing in...' : (isAuthenticated ? 'Enter Studio' : 'Get started with Google')}
+            </button>
+            <div className="home-socialProof hero-anim hero-anim--4">Used for 1,200+ quiz attempts this week</div>
+            {error && <p className="login-error">{error}</p>}
+          </div>
+
+          <div className="home-demo feature-anim feature-anim--1">
+            <div className="home-demo-head">
+              <span className="home-demo-dot home-demo-dot--red" />
+              <span className="home-demo-dot home-demo-dot--yellow" />
+              <span className="home-demo-dot home-demo-dot--green" />
+              <div className="home-demo-mode">
+                <button
+                  type="button"
+                  className={`home-demo-modeBtn${demoMode === 'notes' ? ' active' : ''}`}
+                  onClick={() => setDemoMode('notes')}
+                >
+                  Raw Notes
+                </button>
+                <button
+                  type="button"
+                  className={`home-demo-modeBtn${demoMode === 'quiz' ? ' active' : ''}`}
+                  onClick={() => setDemoMode('quiz')}
+                >
+                  Quiz View
+                </button>
+              </div>
+            </div>
+            <div className="home-demo-body">
+              <div className="home-demo-row">
+                <span className="home-demo-tag">Upload</span>
+                <span className="home-demo-line">Operating Systems Lecture 5.pdf</span>
+              </div>
+              <div className="home-demo-row">
+                <span className="home-demo-tag">Generate</span>
+                <span className="home-demo-line">10 questions · Mixed difficulty</span>
+              </div>
+              {demoMode === 'notes' ? (
+                <div className="home-demo-notes">
+                  <div className="home-demo-noteLine">• SJF minimizes average waiting time when burst estimates are accurate.</div>
+                  <div className="home-demo-noteLine">• FCFS can cause convoy effect with long CPU-bound jobs.</div>
+                  <div className="home-demo-noteLine">• RR improves responsiveness via fixed time quantum.</div>
+                  <div className="home-demo-noteLine">• Preemptive variants trade overhead for fairness.</div>
+                </div>
+              ) : (
+                <div className="home-demo-quiz">
+                  <div className="home-demo-qtitle">Q: Which scheduler minimizes average wait time?</div>
+                  <div className="home-demo-opt">A. FCFS</div>
+                  <div className="home-demo-opt active">B. SJF</div>
+                  <div className="home-demo-opt">C. Round Robin</div>
+                  <div className="home-demo-opt">D. EDF</div>
+                </div>
+              )}
+              <div className="home-demo-stats">
+                <div className="home-demo-stat"><strong>82%</strong><span>Rolling avg</span></div>
+                <div className="home-demo-stat"><strong>+7pp</strong><span>Improvement</span></div>
+                <div className="home-demo-stat"><strong>5</strong><span>Best streak</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="home-floatChips home-floatChips--edge" aria-hidden="true">
+            <span className="home-floatChip home-floatChip--a">82% rolling avg</span>
+            <span className="home-floatChip home-floatChip--b">+7pp improvement</span>
+            <span className="home-floatChip home-floatChip--c">5 best streak</span>
+          </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="home-features">
-        <div className="home-features-grid">
-          <div className="home-feature-card feature-anim feature-anim--1">
-            <div className="home-feature-icon">&#128196;</div>
+      <section className="home-trust">
+        <div className="home-trust-strip">
+          <span>PDF upload</span>
+          <span>Adaptive quiz generation</span>
+          <span>Review queue</span>
+          <span>Citation coverage</span>
+          <span>Progress analytics</span>
+        </div>
+      </section>
+
+      <section className="home-process">
+        <div className="home-process-grid">
+          <div className="home-process-card feature-anim feature-anim--1">
+            <div className="home-process-index">01</div>
             <h3 className="home-feature-title">Upload your material</h3>
-            <p className="home-feature-desc">
-              Drop in any PDF or slide deck. The AI chunks your content into logical study units automatically.
-            </p>
+            <p className="home-feature-desc">Drop in any PDF. Lectify parses and chunks it automatically.</p>
           </div>
-          <div className="home-feature-card feature-anim feature-anim--2">
-            <div className="home-feature-icon">&#129488;</div>
+          <div className="home-process-card feature-anim feature-anim--2">
+            <div className="home-process-index">02</div>
             <h3 className="home-feature-title">Generate quizzes instantly</h3>
-            <p className="home-feature-desc">
-              Choose question count and type — MCQ, True/False, Multi-select, or Short Answer — and get a tailored quiz in seconds.
-            </p>
+            <p className="home-feature-desc">Pick question types and difficulty, then launch in one click.</p>
           </div>
-          <div className="home-feature-card feature-anim feature-anim--3">
-            <div className="home-feature-icon">&#128200;</div>
+          <div className="home-process-card feature-anim feature-anim--3">
+            <div className="home-process-index">03</div>
             <h3 className="home-feature-title">Track your progress</h3>
-            <p className="home-feature-desc">
-              Review scores, identify weak topics, and watch your understanding improve session over session.
-            </p>
+            <p className="home-feature-desc">Use rolling average, weak areas, and review queue to improve faster.</p>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="home-footer">
-        <span>&#128214; MDQuiz</span>
+        <span>Lectify</span>
       </footer>
-
     </div>
   );
 };

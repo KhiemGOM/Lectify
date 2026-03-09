@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase/firebaseConfig';
-import { saveSubject, loadSubjects, deleteSubject } from './firebase/subjects';
 import './styles/UploadPage.css';
 import './styles/LoginPage.css';
 import SideBar from './components/SideBar';
@@ -11,9 +10,12 @@ import QuizResults from './components/QuizResults';
 import QuizPage from './components/QuizPage';
 import AnalyticsPage from './components/AnalyticsPage';
 import LoginPage from './components/LoginPage';
+import NoSubjectHome from './components/NoSubjectHome';
 import { QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY } from './utils/quizData';
-import { deleteFile } from './utils/api';
+import { deleteFile, deleteSubject, loadSubjects, saveSubject } from './utils/api';
 import LoadingModal from './components/LoadingModal';
+
+const APP_PATH = '/studio';
 
 const App = () => {
   // ── All hooks must be called unconditionally at the top ───────────────────
@@ -35,12 +37,13 @@ const App = () => {
     }
   });
 
-  const [activeTab, setActiveTab] = useState('upload');
+  const [activeTab, setActiveTab] = useState('home');
   const [uploadSessions, setUploadSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [lastQuizResults, setLastQuizResults] = useState(null);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(null);
+  const [showUploadComposer, setShowUploadComposer] = useState(false);
 
   // Listen for Firebase auth state
   useEffect(() => {
@@ -50,16 +53,37 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (quizWindowData) return;
+    if (user === undefined) return;
+
+    const path = window.location.pathname;
+    if (!user) {
+      if (path.startsWith(APP_PATH)) {
+        window.history.replaceState({}, '', '/');
+      }
+      return;
+    }
+
+    // Keep "/" as public homepage even when authenticated.
+    if (path !== '/' && !path.startsWith(APP_PATH)) {
+      window.history.replaceState({}, '', APP_PATH);
+    }
+  }, [user, quizWindowData]);
+
   // Load saved subjects when user logs in
   useEffect(() => {
     if (!user) {
       setUploadSessions([]);
       setCurrentSessionId(null);
+      setShowUploadComposer(false);
       return;
     }
     setSessionsLoading(true);
     loadSubjects(user.uid)
-      .then((sessions) => setUploadSessions(sessions))
+      .then((sessions) => {
+        setUploadSessions(sessions);
+      })
       .catch((err) => console.error('Failed to load subjects:', err))
       .finally(() => setSessionsLoading(false));
   }, [user]);
@@ -83,6 +107,7 @@ const App = () => {
   }, []);
 
   const isInActiveSession = uploadSessions.length > 0 && currentSessionId !== null;
+  const showUploadTab = isInActiveSession || showUploadComposer;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUploadComplete = (title, fileCount, apiData, subjectId, context) => {
@@ -167,7 +192,8 @@ const App = () => {
     setUploadSessions(prev => prev.filter(s => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       setCurrentSessionId(null);
-      setActiveTab('upload');
+      setActiveTab('home');
+      setShowUploadComposer(false);
     }
     setLoadingMessage(null);
   };
@@ -181,8 +207,17 @@ const App = () => {
     );
   }
 
+  if (window.location.pathname === '/') {
+    return (
+      <LoginPage
+        isAuthenticated={!!user}
+        onEnterStudio={() => window.location.assign(APP_PATH)}
+      />
+    );
+  }
+
   if (!user) {
-    return <LoginPage />;
+    return <LoginPage isAuthenticated={false} />;
   }
 
   // ── Quiz popup window: render QuizPage directly, no shell ────────────────
@@ -194,6 +229,9 @@ const App = () => {
         questions={quizWindowData.questions}
         userId={quizWindowData.userId ?? 'default_user'}
         subjectId={quizWindowData.subjectId ?? 'default_subject'}
+        reviewMode={!!quizWindowData.reviewMode}
+        initialAnswers={quizWindowData.initialAnswers ?? {}}
+        initialResults={quizWindowData.initialResults ?? null}
         onExit={() => window.close()}
       />
     );
@@ -207,26 +245,41 @@ const App = () => {
       <SideBar
           handleNewSession={() => {
             setCurrentSessionId(null);
-            setActiveTab('upload');
+            setActiveTab('home');
+            setShowUploadComposer(true);
+          }}
+          handleGoHome={() => {
+            setCurrentSessionId(null);
+            setActiveTab('home');
+            setShowUploadComposer(false);
+            window.location.assign('/');
           }}
           setCurrentSessionId={(id) => {
             setCurrentSessionId(id);
             setLastQuizResults(null);
+            setShowUploadComposer(false);
             setActiveTab('quiz');
           }}
           currentSessionId={currentSessionId}
           uploadSessions={uploadSessions}
           onDeleteSubject={handleDeleteSubject}
+          loadingSessions={sessionsLoading}
       />
 
       <main className="main-content">
         <header className="header">
           <nav className="tabs">
             <button
-                className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upload')}
+                className={`tab ${activeTab === 'home' ? 'active' : ''}`}
+                onClick={() => {
+                  if (!showUploadTab) {
+                    setCurrentSessionId(null);
+                    setShowUploadComposer(false);
+                  }
+                  setActiveTab('home');
+                }}
               >
-                Upload
+                {showUploadTab ? 'Upload' : 'Home'}
               </button>
             {isInActiveSession && (
               <>
@@ -258,17 +311,22 @@ const App = () => {
           </div>
         </header>
 
-        {activeTab === 'upload' && (
-          <UploadPage
-            onUploadComplete={handleUploadComplete}
-            isInSession={isInActiveSession}
-            userId={user.uid}
-            subjectId={currentSessionId ?? null}
-            sessionFiles={uploadSessions.find(s => s.id === currentSessionId)?.files ?? []}
-            onDeleteFile={(fileId) => handleDeleteFile(currentSessionId, fileId)}
-            sessionContext={uploadSessions.find(s => s.id === currentSessionId)?.context ?? ''}
-            onUpdateContext={handleUpdateContext}
-          />
+        {activeTab === 'home' && (
+          (isInActiveSession || showUploadComposer)
+            ? <UploadPage
+                onUploadComplete={handleUploadComplete}
+                isInSession={isInActiveSession}
+                userId={user.uid}
+                subjectId={currentSessionId ?? null}
+                sessionFiles={uploadSessions.find(s => s.id === currentSessionId)?.files ?? []}
+                onDeleteFile={(fileId) => handleDeleteFile(currentSessionId, fileId)}
+                sessionContext={uploadSessions.find(s => s.id === currentSessionId)?.context ?? ''}
+                onUpdateContext={handleUpdateContext}
+              />
+            : <NoSubjectHome
+                hasSubjects={uploadSessions.length > 0}
+                onStartNew={() => setShowUploadComposer(true)}
+              />
         )}
         {activeTab === 'quiz' && (
           lastQuizResults

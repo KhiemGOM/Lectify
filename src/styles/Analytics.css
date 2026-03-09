@@ -53,10 +53,21 @@
 }
 
 .an-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
   border-radius: var(--radius-sm);
-  padding: 7px 10px;
+  padding: 7px 28px 7px 10px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   color: var(--text-primary);
@@ -70,6 +81,148 @@
   border-color: var(--primary-blue);
 }
 
+.an-select::-ms-expand {
+  display: none;
+}
+
+.an-rxSelectTrigger {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  min-width: 220px;
+  max-width: 320px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  outline: none;
+}
+
+.an-rxSelectTrigger--compact {
+  min-width: 140px;
+  max-width: 170px;
+}
+
+.an-rxSelectTrigger:focus {
+  border-color: var(--primary-blue);
+}
+
+.an-rxSelectTrigger[data-disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.an-rxSelectIcon {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.an-rxSelectContent {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 70;
+  max-height: 320px;
+  overflow: hidden;
+}
+
+.an-rxSelectViewport {
+  padding: 4px;
+}
+
+.an-rxSelectItem {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  cursor: pointer;
+}
+
+.an-rxSelectItem[data-highlighted] {
+  outline: none;
+  background: color-mix(in srgb, var(--primary-blue) 10%, transparent);
+}
+
+.an-reactSelectWrap {
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.an-reactSelectWrap--compact {
+  min-width: 140px;
+  max-width: 170px;
+}
+
+.an-reactSelect__control {
+  min-height: 34px !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--bg-primary) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.an-reactSelect__control--is-focused {
+  border-color: var(--primary-blue) !important;
+}
+
+.an-reactSelect__value-container {
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  color: var(--text-primary) !important;
+}
+
+.an-reactSelect__single-value {
+  color: var(--text-primary) !important;
+}
+
+.an-reactSelect__indicator-separator {
+  display: none !important;
+}
+
+.an-reactSelect__dropdown-indicator {
+  color: var(--text-secondary) !important;
+  padding-right: 10px !important;
+}
+
+.an-reactSelect__menu {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-md) !important;
+  overflow: hidden;
+}
+
+.an-reactSelect__menu-list {
+  padding: 4px !important;
+}
+
+.an-reactSelect__option {
+  border-radius: 6px;
+  font-size: 13px !important;
+  color: var(--text-primary) !important;
+  cursor: pointer !important;
+}
+
+.an-reactSelect__option--is-focused {
+  background: color-mix(in srgb, var(--primary-blue) 10%, transparent) !important;
+}
+
+.an-reactSelect__option--is-selected {
+  background: color-mix(in srgb, var(--primary-blue) 16%, transparent) !important;
+}
+
 /* ── Cards ── */
 .an-card {
   background: var(--bg-primary);
@@ -81,6 +234,14 @@
 
 .an-cardHead {
   margin-bottom: 14px;
+}
+
+.an-cardHeadInline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .an-cardTitle {
@@ -99,9 +260,10 @@
 /* ── Summary card ── */
 .an-summaryGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+
 
 @media (max-width: 900px) {
   .an-summaryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -130,15 +292,15 @@
   letter-spacing: -0.5px;
 }
 
-/* ── 2×2 chart grid ── */
-.an-grid2x2 {
+/* two-column row */
+.an-grid2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 @media (max-width: 900px) {
-  .an-grid2x2 { grid-template-columns: 1fr; }
+  .an-grid2 { grid-template-columns: 1fr; }
 }
 
 .an-chartBox {
@@ -204,12 +366,58 @@
   border-bottom: 1px solid var(--bg-tertiary);
 }
 
+.an-clickableRow {
+  cursor: pointer;
+  transition: background-color 0.14s ease, transform 0.06s ease;
+}
+
+.an-clickableRow:hover td {
+  background: color-mix(in srgb, var(--primary-blue) 6%, transparent);
+}
+
+.an-clickableRow:active td {
+  background: color-mix(in srgb, var(--primary-blue) 10%, transparent);
+}
+
 .an-muted     { color: var(--text-secondary); }
 .an-strong    { font-weight: 700; color: var(--text-primary); }
 .an-mutedCell {
   color: var(--text-secondary);
   text-align: center;
   padding: 16px 8px;
+}
+
+.an-historyScroll {
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-secondary) 35%, transparent) transparent;
+}
+
+.an-historyScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.an-historyScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.an-historyScroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-secondary) 30%, transparent);
+  border-radius: 999px;
+}
+
+.an-historyScroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+}
+
+.an-historyState {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 /* ── State cards (loading / error) ── */

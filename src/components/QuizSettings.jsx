@@ -3,6 +3,29 @@ import "../styles/QuizSettings.css";
 import {getAllMockQuestions, buildQuestions, QUIZ_STORAGE_KEY, QUIZ_RESULTS_KEY} from "../utils/quizData";
 import {fetchFailedQuestions, generateQuestion, mapApiQuestion} from "../utils/api";
 import LoadingModal from "./LoadingModal";
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
+
+const REVISIT_STOPS = [0, 25, 50, 75, 100];
+const TYPE_LABELS = {
+    MCQ: "MCQ",
+    TF: "True/False",
+    MULTI: "Multi",
+    TEXT: "Short Answer",
+};
+const revisitModeLabel = (percent) => {
+    if (percent <= 0) return "Always fresh";
+    if (percent >= 100) return "Always failed";
+    return `${percent}% failed`;
+};
+
+const snapRevisitPercent = (value) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return 0;
+    return REVISIT_STOPS.reduce((best, cur) =>
+        Math.abs(cur - n) < Math.abs(best - n) ? cur : best
+    , REVISIT_STOPS[0]);
+};
 
 const getStored = (key, fallback) => {
     try {
@@ -34,9 +57,14 @@ export default function QuizSettings({session, userId = 'default_user'}) {
     const [types, setTypes] = usePersisted(prefix + 'types', ['MCQ', 'TF', 'MULTI', 'TEXT']);
     const [scopes, setScopes] = usePersisted(prefix + 'scopes', ['Theory', 'Applied']);
     const [timerEnabled, setTimerEnabled] = usePersisted(prefix + 'timerEnabled', false);
-    const [revisitFailed, setRevisitFailed] = usePersisted(prefix + 'revisitFailed', false);
+    const oldRevisitToggle = getStored(prefix + 'revisitFailed', false);
+    const [revisitFailedPercent, setRevisitFailedPercent] = usePersisted(
+        prefix + 'revisitFailedPercent',
+        oldRevisitToggle ? 25 : 0,
+    );
     const [timeMins, setTimeMins] = usePersisted(prefix + 'timeMins', 15);
     const [generating, setGenerating] = useState(false);
+    const revisitPercent = snapRevisitPercent(revisitFailedPercent);
 
 
     const stepNum = (delta) => {
@@ -73,7 +101,8 @@ export default function QuizSettings({session, userId = 'default_user'}) {
             difficulty,
             types,
             scopes,
-            revisitFailed,
+            revisitFailed: revisitPercent > 0,
+            revisitFailedPercent: revisitPercent,
             timeLimitOn: timerEnabled,
             timeLimitMins: timeMins,
         };
@@ -93,6 +122,9 @@ export default function QuizSettings({session, userId = 'default_user'}) {
             // Generate questions from uploaded slides via API
             const validTypes = types.length > 0 ? types : ["MCQ"];
             const validScopes = scopes.length > 0 ? scopes : ["Theory"];
+            const fileNameById = new Map(
+                sessionFiles.map((f) => [String(f.fileId ?? ""), f.filename ?? "Reference"]),
+            );
 
             const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
@@ -111,15 +143,23 @@ export default function QuizSettings({session, userId = 'default_user'}) {
 
 
             let revisitQuestions = [];
-            if (settings.revisitFailed) {
+            const targetFailedCount = Math.min(
+                numQuestions,
+                Math.max(0, Math.round((numQuestions * revisitPercent) / 100)),
+            );
+            if (targetFailedCount > 0) {
                 try {
                     const res = await fetchFailedQuestions(userId, String(session?.id ?? 'default_subject'), {
                         types: validTypes,
                         scopes: validScopes,
-                        difficulties: difficulty === 'Mixed' ? ['Easy', 'Medium', 'Hard'] : [difficulty],
-                        limit: Math.max(1, Math.floor(numQuestions * 0.3)),
+                        difficulty: difficulty === 'Mixed' ? null : difficulty,
+                        limit: targetFailedCount,
                     });
                     revisitQuestions = (res.questions ?? []).map(q => {
+                        const resolvedFilename =
+                            q.filename ??
+                            fileNameById.get(String(q.file_id ?? "")) ??
+                            "Reference";
                         const fakeApiRes = {
                             question_id: q.question_id,
                             raw: {
@@ -130,7 +170,7 @@ export default function QuizSettings({session, userId = 'default_user'}) {
                             }
                         };
                         return {
-                            ...mapApiQuestion(fakeApiRes, q.format_type, q.filename ?? null, null, q.file_id ?? null),
+                            ...mapApiQuestion(fakeApiRes, q.format_type, resolvedFilename, null, q.file_id ?? null),
                             isRevisit: true,
                         };
                     });
@@ -175,17 +215,27 @@ export default function QuizSettings({session, userId = 'default_user'}) {
             subjectId: String(session?.id ?? 'default_subject')
         }));
 
+        const popupWidth = window.screen?.availWidth || 1280;
+        const popupHeight = window.screen?.availHeight || 860;
         const features = [
-            "width=1280", "height=860",
-            "left=80", "top=60",
+            `width=${popupWidth}`, `height=${popupHeight}`,
+            "left=0", "top=0",
             "menubar=no", "toolbar=no", "location=no",
             "status=no", "resizable=yes", "scrollbars=yes",
         ].join(",");
 
         localStorage.removeItem(QUIZ_RESULTS_KEY);
         console.log('[QuizSettings] opening popup, questions:', questions.length, questions);
-        const popup = window.open("/?mode=quiz", "quizWindow", features);
+        const popup = window.open("/studio?mode=quiz", "quizWindow", features);
         console.log('[QuizSettings] popup result:', popup, 'closed:', popup?.closed);
+        if (popup && !popup.closed) {
+            try {
+                popup.moveTo(0, 0);
+                popup.resizeTo(popupWidth, popupHeight);
+            } catch (_) {
+                // Browser may block move/resize calls.
+            }
+        }
         setGenerating(false);
 
         if (!popup || popup.closed) {
@@ -196,9 +246,12 @@ export default function QuizSettings({session, userId = 'default_user'}) {
         }
     };
 
+    const summaryTypeText = types.length > 0
+        ? types.map((t) => TYPE_LABELS[t] ?? t).join(", ")
+        : "No types selected";
     const summaryText = `${numQuestions} questions · ${difficulty} · ${
-        types.length > 0 ? types.join(", ") : "No types selected"
-    }${timerEnabled ? ` · ${timeMins} min` : ""}`;
+        summaryTypeText
+    } · ${revisitModeLabel(revisitPercent)}${timerEnabled ? ` · ${timeMins} min` : ""}`;
 
     return (
         <div className="qs-page">
@@ -231,17 +284,24 @@ export default function QuizSettings({session, userId = 'default_user'}) {
                 <div className="qs-row">
                     <div className="qs-label-wrap">
                         <div className="qs-label">Revisit failed questions</div>
-                        <div className="qs-desc">Mix in questions you got wrong in past attempts</div>
+                        <div className="qs-desc">Mix ratio from always fresh to always failed questions</div>
                     </div>
-                    <div className="qs-toggle-wrap">
-                        <label className="qs-toggle">
-                            <input
-                                type="checkbox"
-                                checked={revisitFailed}
-                                onChange={(e) => setRevisitFailed(e.target.checked)}
+                    <div className="qs-revisit-wrap">
+                        <div className="qs-revisit-top">
+                            <span className="qs-revisit-mode">{revisitModeLabel(revisitPercent)}</span>
+                        </div>
+                        <label
+                            className="qs-revisit-slider-wrap"
+                        >
+                            <Slider
+                                min={0}
+                                max={100}
+                                step={25}
+                                dots
+                                value={revisitPercent}
+                                onChange={(value) => setRevisitFailedPercent(snapRevisitPercent(value))}
+                                className="qs-revisit-slider-lib"
                             />
-                            <span className="qs-toggle-track"></span>
-                            <span className="qs-toggle-thumb"></span>
                         </label>
                     </div>
                 </div>

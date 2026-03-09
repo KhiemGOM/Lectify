@@ -61,8 +61,26 @@ body {
   font-size: 32px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 48px;
+  margin: 0;
   letter-spacing: -0.5px;
+}
+
+.logo {
+  margin-bottom: 48px;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-self: flex-start;
+  width: auto;
+}
+
+.logo:focus,
+.logo:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .logo h1 span {
