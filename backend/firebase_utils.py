@@ -71,7 +71,9 @@ def init_firebase_admin(*, service_account_path: str | None = None, project_id: 
     creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
     if creds_json:
         import json
-        cred = credentials.Certificate(json.loads(creds_json))
+        cred_dict = json.loads(creds_json)
+        cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+        cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred, {
             "projectId": project_id,
             "storageBucket": f"{project_id}.firebasestorage.app"
