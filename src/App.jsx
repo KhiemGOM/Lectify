@@ -158,7 +158,6 @@ const App = () => {
         };
         setUploadSessions(prev => [newSession, ...prev]);
         setCurrentSessionId(newSession.id);
-        setActiveTab('quiz');
         saveSubject(user.uid, newSession).catch(console.error);
     };
 

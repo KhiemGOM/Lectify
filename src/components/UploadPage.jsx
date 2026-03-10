@@ -106,9 +106,11 @@ function UploadPage({
 
     const handleFiles = (newFiles) => {
         const validFiles = newFiles.filter(file => {
-            const isValidType = file.type === 'application/pdf';
+            const VALID_EXTENSIONS = ['pdf', 'pptx', 'docx', 'txt', 'md'];
+            const ext = file.name.split('.').pop().toLowerCase();
+            const isValidType = VALID_EXTENSIONS.includes(ext);
             if (!isValidType) {
-                alert(`${file.name} is not a valid file type. Only PDFs and images are allowed.`);
+                alert(`${file.name} is not a valid file type. Supported: PDF, PPTX, DOCX, TXT, MD`);
             }
             return isValidType;
         });
@@ -308,12 +310,12 @@ function UploadPage({
                         color: "red"
                     }}>*</span></h3>
                     <p>or click to browse</p>
-                    <span className="file-types">Supported: PDF</span>
+                    <span className="file-types">Supported: PDF, PPTX, DOCX, TXT, MD</span>
                     <input
                         ref={fileInputRef}
                         type="file"
                         multiple
-                        accept=".pdf"
+                        accept=".pdf,.pptx,.docx,.txt,.md"
                         onChange={handleFileInput}
                         style={{display: 'none'}}
                     />
