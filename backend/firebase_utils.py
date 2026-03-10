@@ -72,6 +72,10 @@ def init_firebase_admin(*, service_account_path: str | None = None, project_id: 
     if creds_json:
         import json
         cred_dict = json.loads(creds_json)
+        # anchor: cred_dict = json.loads(creds_json)
+        # ↓ INSERT HERE
+        import logging
+        logging.warning(f"private_key first 100 chars: {repr(cred_dict['private_key'][:100])}")
         cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
         cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred, {
