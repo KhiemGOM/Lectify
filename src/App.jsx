@@ -124,16 +124,37 @@ const App = () => {
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
+// ↓ replace with:
     useEffect(() => {
-        const slowTimer = window.setTimeout(() => setBackendSlow(true), 2000);
-        fetch(`${import.meta.env.VITE_API_BASE}/health`)
-            .then(() => {
-                setBackendReady(true);
-                setBackendSlow(false);
-            })
-            .catch(() => setBackendReady(true)) // fail silently, don't block UI
-            .finally(() => window.clearTimeout(slowTimer));
-        return () => window.clearTimeout(slowTimer);
+        let retryTimer = null;
+        let pollTimer = null;
+
+        const checkHealth = () => {
+            fetch(`${import.meta.env.VITE_API_BASE}/health`)
+                .then(() => {
+                    if (backendSlow) window.location.reload();
+                    setBackendReady(true);
+                    setBackendSlow(false);
+                    pollTimer = window.setTimeout(() => checkHealth(), 60000);
+                })
+                .catch(() => {
+                    setBackendReady(false);
+                    setBackendSlow(true);
+                    retryTimer = window.setTimeout(() => checkHealth(), 5000);
+                });
+        };
+
+        const slowTimer = window.setTimeout(() => {
+            setBackendSlow(true);
+        }, 2000);
+
+        checkHealth();
+
+        return () => {
+            window.clearTimeout(slowTimer);
+            window.clearTimeout(retryTimer);
+            window.clearTimeout(pollTimer);
+        };
     }, []);
 
     const isInActiveSession = uploadSessions.length > 0 && currentSessionId !== null;
@@ -148,9 +169,7 @@ const App = () => {
         if (isInActiveSession) {
             setUploadSessions(prev => {
                 const updated = prev.map(s => s.id === currentSessionId ? {
-                    ...s,
-                    fileCount: s.fileCount + fileCount,
-                    files: [...s.files, ...newFiles]
+                    ...s, fileCount: s.fileCount + fileCount, files: [...s.files, ...newFiles]
                 } : s);
                 // Persist the updated session
                 const updatedSession = updated.find(s => s.id === currentSessionId);
@@ -277,12 +296,10 @@ const App = () => {
 
     // ── Normal app shell ──────────────────────────────────────────────────────
 
-    return (<div className="upload-container">
+    return (<div style={{display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden'}}>
         {backendSlow && !backendReady && (<div style={{
-            position: 'fixed',
+            position: 'sticky',
             top: 0,
-            left: 0,
-            right: 0,
             zIndex: 999,
             background: '#f59e0b',
             color: '#1c1917',
@@ -291,76 +308,78 @@ const App = () => {
             fontSize: 13,
             fontWeight: 500
         }}>
-            ⚡ Our AI is waking up from sleep — this may take ~30 seconds. Hang tight!
+            ⚡ Our AI is waking up from its sleep — this may take ~30 seconds. Check your connection if this persists.
         </div>)}
-        {loadingMessage && <LoadingModal message={loadingMessage}/>}
-        <SideBar
-            handleNewSession={() => {
-                setCurrentSessionId(null);
-                setActiveTab('home');
-                setShowUploadComposer(true);
-            }}
-            handleGoHome={() => {
-                setCurrentSessionId(null);
-                setActiveTab('home');
-                setShowUploadComposer(false);
-                window.location.assign('/');
-            }}
-            setCurrentSessionId={(id) => {
-                setCurrentSessionId(id);
-                setLastQuizResults(null);
-                setShowUploadComposer(false);
-            }}
-            currentSessionId={currentSessionId}
-            uploadSessions={uploadSessions}
-            onDeleteSubject={handleDeleteSubject}
-            loadingSessions={sessionsLoading}
-        />
+        <div className="upload-container">
+            {loadingMessage && <LoadingModal message={loadingMessage}/>}
+            <SideBar
+                handleNewSession={() => {
+                    setCurrentSessionId(null);
+                    setActiveTab('home');
+                    setShowUploadComposer(true);
+                }}
+                handleGoHome={() => {
+                    setCurrentSessionId(null);
+                    setActiveTab('home');
+                    setShowUploadComposer(false);
+                    window.location.assign('/');
+                }}
+                setCurrentSessionId={(id) => {
+                    setCurrentSessionId(id);
+                    setLastQuizResults(null);
+                    setShowUploadComposer(false);
+                }}
+                currentSessionId={currentSessionId}
+                uploadSessions={uploadSessions}
+                onDeleteSubject={handleDeleteSubject}
+                loadingSessions={sessionsLoading}
+            />
 
-        <main className="main-content">
-            <header className="header">
-                <nav className="tabs">
-                    <button
-                        className={`tab ${activeTab === 'home' ? 'active' : ''}`}
-                        onClick={() => {
-                            if (!showUploadTab) {
-                                setCurrentSessionId(null);
-                                setShowUploadComposer(false);
-                            }
-                            setActiveTab('home');
-                        }}
-                    >
-                        {showUploadTab ? 'Upload' : 'Home'}
-                    </button>
-                    {isInActiveSession && (<>
+            <main className="main-content">
+                <header className="header">
+                    <nav className="tabs">
                         <button
-                            className={`tab ${activeTab === 'quiz' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('quiz')}
+                            className={`tab ${activeTab === 'home' ? 'active' : ''}`}
+                            onClick={() => {
+                                if (!showUploadTab) {
+                                    setCurrentSessionId(null);
+                                    setShowUploadComposer(false);
+                                }
+                                setActiveTab('home');
+                            }}
                         >
-                            Quiz
+                            {showUploadTab ? 'Upload' : 'Home'}
                         </button>
-                        <button
-                            className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('analytics')}
-                        >
-                            Analytics
-                        </button>
-                    </>)}
-                </nav>
-                <div className="user-section">
+                        {isInActiveSession && (<>
+                            <button
+                                className={`tab ${activeTab === 'quiz' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('quiz')}
+                            >
+                                Quiz
+                            </button>
+                            <button
+                                className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('analytics')}
+                            >
+                                Analytics
+                            </button>
+                        </>)}
+                    </nav>
+                    <div className="user-section">
             <span style={{fontSize: 13, color: 'var(--text-secondary, #64748b)', marginRight: 10}}>
               {user.displayName || user.email}
             </span>
-                    <button
-                        type="button"
-                        className="theme-toggle-btn"
-                        onClick={toggleTheme}
-                        aria-label={`Switch to ${nextTheme} mode`}
-                        title={`Switch to ${nextTheme} mode`}
-                    >
-                        {theme === 'dark' ? (
-                            <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <button
+                            type="button"
+                            className="theme-toggle-btn"
+                            onClick={toggleTheme}
+                            aria-label={`Switch to ${nextTheme} mode`}
+                            title={`Switch to ${nextTheme} mode`}
+                        >
+                            {theme === 'dark' ? (<svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none"
+                                                      stroke="currentColor"
+                                                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                                      aria-hidden="true">
                                 <circle cx="12" cy="12" r="4"/>
                                 <line x1="12" y1="2" x2="12" y2="5"/>
                                 <line x1="12" y1="19" x2="12" y2="22"/>
@@ -370,55 +389,59 @@ const App = () => {
                                 <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
                                 <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
                                 <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
-                            </svg>) : (
-                            <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            </svg>) : (<svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                            aria-hidden="true">
                                 <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
                             </svg>)}
-                    </button>
-                    <button
-                        onClick={() => signOut(auth)}
-                        style={{
-                            fontSize: 13,
-                            padding: '6px 14px',
-                            background: 'transparent',
-                            border: '1px solid var(--border-color, #e2e8f0)',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            color: 'var(--text-secondary, #64748b)'
-                        }}
-                    >
-                        Sign out
-                    </button>
-                </div>
-            </header>
+                        </button>
+                        <button
+                            onClick={() => signOut(auth)}
+                            style={{
+                                fontSize: 13,
+                                padding: '6px 14px',
+                                background: 'transparent',
+                                border: '1px solid var(--border-color, #e2e8f0)',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                color: 'var(--text-secondary, #64748b)'
+                            }}
+                        >
+                            Sign out
+                        </button>
+                    </div>
+                </header>
 
-            {activeTab === 'home' && ((isInActiveSession || showUploadComposer) ? <UploadPage
-                onUploadComplete={handleUploadComplete}
-                isInSession={isInActiveSession}
-                userId={user.uid}
-                subjectId={currentSessionId ?? null}
-                sessionFiles={uploadSessions.find(s => s.id === currentSessionId)?.files ?? []}
-                onDeleteFile={(fileId) => handleDeleteFile(currentSessionId, fileId)}
-                sessionContext={uploadSessions.find(s => s.id === currentSessionId)?.context ?? ''}
-                onUpdateContext={handleUpdateContext}
-            /> : <NoSubjectHome
-                hasSubjects={uploadSessions.length > 0}
-                onStartNew={() => setShowUploadComposer(true)}
-            />)}
-            {activeTab === 'quiz' && (lastQuizResults ? <QuizResults
-                results={lastQuizResults.results}
-                quizMeta={lastQuizResults.quizMeta}
-                onRetake={() => setLastQuizResults(null)}
-            /> : <QuizSettings
-                key={currentSessionId}
-                session={uploadSessions.find(s => s.id === currentSessionId)}
-                userId={user.uid}
-            />)}
-            {activeTab === 'analytics' && (sessionsLoading ?
-                <div style={{padding: 40, color: 'var(--text-secondary)'}}>Loading…</div> :
-                <AnalyticsPage userId={user.uid} subjectId={String(currentSessionId)}/>)}
-        </main>
+                {activeTab === 'home' && ((isInActiveSession || showUploadComposer) ? <UploadPage
+                    key={currentSessionId}
+                    onUploadComplete={handleUploadComplete}
+                    isInSession={isInActiveSession}
+                    userId={user.uid}
+                    subjectId={currentSessionId ?? null}
+                    sessionFiles={uploadSessions.find(s => s.id === currentSessionId)?.files ?? []}
+                    onDeleteFile={(fileId) => handleDeleteFile(currentSessionId, fileId)}
+                    sessionContext={uploadSessions.find(s => s.id === currentSessionId)?.context ?? ''}
+                    onUpdateContext={handleUpdateContext}
+                /> : <NoSubjectHome
+                    hasSubjects={uploadSessions.length > 0}
+                    onStartNew={() => setShowUploadComposer(true)}
+                />)}
+                {activeTab === 'quiz' && (lastQuizResults ? <QuizResults
+                    results={lastQuizResults.results}
+                    quizMeta={lastQuizResults.quizMeta}
+                    onRetake={() => setLastQuizResults(null)}
+                /> : <QuizSettings
+                    key={currentSessionId}
+                    session={uploadSessions.find(s => s.id === currentSessionId)}
+                    userId={user.uid}
+                />)}
+                {activeTab === 'analytics' && (sessionsLoading ?
+                    <div style={{padding: 40, color: 'var(--text-secondary)'}}>Loading…</div> :
+                    <AnalyticsPage key={currentSessionId} userId={user.uid}
+                                   subjectId={String(currentSessionId)}/>)}
+            </main>
+        </div>
     </div>);
 };
 
